@@ -1,12 +1,15 @@
 {
   "name": "smartware-server",
-  "version": "0.2.0",
-  "description": "SMARTWARE 360 — warehouse management server. Phase 2: schema and ledger invariants.",
+  "version": "0.3.0",
+  "description": "SMARTWARE 360 \u2014 warehouse management server. Phase 2: schema, ledger invariants, and REST API.",
   "private": true,
   "scripts": {
+    "start": "node src/server.js",
     "migrate": "node src/migrate.js",
-    "test": "node test/schema.test.js",
-    "test:pg": "DATABASE_URL=$DATABASE_URL node test/schema.test.js"
+    "test": "node test/money.test.js && node test/schema.test.js && node test/api.test.js",
+    "test:money": "node test/money.test.js",
+    "test:schema": "node test/schema.test.js",
+    "test:api": "node test/api.test.js"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8"
@@ -14,5 +17,8 @@
   "optionalDependencies": {
     "pg": "^8.13.1"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "src/server.js"
 }
