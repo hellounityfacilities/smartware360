@@ -1,3 +1,4 @@
+[ARCHITECTURE.md](https://github.com/user-attachments/files/32232563/ARCHITECTURE.md)
 # SMARTWARE 360 — server architecture
 
 Phase 2, part one: the schema and the guarantees it enforces.
@@ -139,17 +140,89 @@ entire ledger.
 
 ---
 
-## Still to come in Phase 2
+---
 
-- `src/money.js` — integer-based currency arithmetic for valuation, so costs never meet
-  a float.
-- `src/auth.js` — scrypt password hashing, server-side sessions, login throttling against
-  the `failed_logins` / `locked_until` columns already in the schema.
-- Services for receiving, issuing, transfer, counting, requests and adjustments, each
-  wrapping a single database transaction.
-- `src/app.js` — the REST API, with the permission codes from `005_reference` enforced per
-  route.
-- A full-month API test: post a realistic month of movement through the API and assert the
-  reports reconcile to the ledger.
+## The API
 
-Then Phase 3 ports the prototype's screens onto this API.
+45 routes, no web framework. The router is about eighty lines over node's `http` module —
+the surface is small, and every dependency in a system holding a customer's inventory is
+something that has to be patched for the life of the product.
+
+```
+npm start                # migrate, then listen on :8080
+curl localhost:8080/health
+```
+
+| Area | Routes |
+|---|---|
+| Session | `POST /api/session`, `DELETE /api/session`, `GET /api/me` |
+| Reference | `/api/warehouses`, `/api/locations`, `/api/items`, `/api/scan/:code` |
+| Movement | `/api/receipts`, `/api/issues`, `/api/transfers`, `/api/transactions/:id/reverse` |
+| Adjustments | `/api/adjustments` and `/approve`, `/reject` |
+| Counting | `/api/counts`, `/api/counts/:id/close` |
+| Requests | `/api/requests` and `/approve`, `/reserve`, `/issue`, `/cancel` |
+| Reports | balances, day, movement, valuation, accuracy, variances, consumption, activity, utilisation, health |
+| Intelligence | reorder, forecast, dead-stock, expiring, abc-xyz, risk, anomalies, tomorrow |
+| Control | `/api/audit`, `/api/settings` |
+
+Authentication is a server-side session, not a signed token, so revoking one takes effect
+on the next request rather than whenever a token happens to expire — which matters when a
+handheld goes missing. Passwords are scrypt with a per-user salt. Failed sign-ins are
+counted on the user row and lock the account for fifteen minutes after five attempts, and
+an unknown username costs the same time and returns the same message as a wrong password,
+so the endpoint cannot be used to enumerate users.
+
+Permission checks live in the services rather than in the routes, so a permission cannot
+be bypassed later by calling a service from somewhere else.
+
+## Money
+
+Inventory valuation multiplies quantity by cost thousands of times per report. In floating
+point the total drifts — not by much, but by enough that a finance manager reconciling to
+two decimal places finds a number nobody can explain. So money is carried as BigInt minor
+units and only becomes a string at the edge. Quantities carry three decimals and unit costs
+four, both as scaled integers, rounded half away from zero exactly once at the end of a
+calculation.
+
+One test demonstrates why: adding `0.1 + 0.2` a thousand times in floating point does not
+reach 300, and the integer path does.
+
+## Tests
+
+```bash
+npm test          # all three suites, about 30 seconds
+```
+
+| Suite | Assertions | What it proves |
+|---|---|---|
+| `money.test.js` | 24 | Precision, rounding, and the float-drift case |
+| `schema.test.js` | 59 | Each of the 33 invariants refuses what it should |
+| `api.test.js` | 94 | A month of activity through the HTTP layer reconciles to the ledger |
+
+**177 assertions.**
+
+The API suite drives a realistic month — sign-in and lockout, receiving with batches and
+quarantine, issuing with FEFO enforcement and an audited override, a transfer, a material
+request through requested → approved → reserved → issued, an adjustment through the
+approval bands, and a physical count with an explained variance. It ends with the
+assertion that matters commercially: the sum of what the API reports as stock on hand
+equals the sum of the transaction ledger, to three decimals, and valuation computed
+independently matches the report.
+
+---
+
+## Still to come
+
+**Phase 3** — port the prototype's screens onto this API: React, the bilingual layer,
+print and export.
+
+**Phase 4** — field readiness: PWA with a service worker, a genuine offline queue in
+IndexedDB replaying against the `idempotency_key` table already in the schema, handheld
+scanner support, photo and signature upload to real storage.
+
+**Phase 5** — the operating layer: scheduled daily executive report, notification routing,
+and forecasting retuned against a customer's actual history rather than a moving average.
+
+**Phase 6** — integration and hardening: OpenAPI documentation, accounting integration,
+multi-company tenancy, backups with restore testing, and the full acceptance walk from
+purchase order to updated dashboard.
