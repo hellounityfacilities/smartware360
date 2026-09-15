@@ -1,0 +1,2471 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F5C58">
+<title>SMARTWARE 360 — Warehouse Control</title>
+<style>
+:root{
+  --ground:#E9E7E1; --panel:#FFFFFF; --panel-2:#F4F2EC;
+  --ink:#1D2321; --ink-2:#5C6562; --ink-3:#8A918E;
+  --line:#CFCCC3; --line-2:#E2DFD7;
+  --teal:#0F5C58; --teal-d:#0A4340; --teal-l:#E3EFEE;
+  --amber:#E09400; --amber-l:#FDF1DA;
+  --ok:#2E7D46; --ok-l:#E4F1E7;
+  --warn:#C08004; --warn-l:#FBF0D8;
+  --crit:#B3261E; --crit-l:#FAE5E3;
+  --over:#1F5FA8; --over-l:#E4EDF7;
+  --dead:#6B3FA0; --dead-l:#EEE8F6;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans Arabic","Segoe UI Arabic",sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --r:4px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ground); color:var(--ink); font-family:var(--sans);
+  font-size:15px; line-height:1.5; -webkit-text-size-adjust:100%;
+}
+body.ar{font-size:15.5px}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--teal)}
+h1,h2,h3,h4{margin:0;font-weight:650;letter-spacing:-.015em;line-height:1.2}
+h1{font-size:26px} h2{font-size:19px} h3{font-size:16px} h4{font-size:14px}
+.mono{font-family:var(--mono);font-size:.88em;letter-spacing:-.02em}
+.muted{color:var(--ink-2)} .dim{color:var(--ink-3)}
+.sm{font-size:13px} .xs{font-size:12px}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- shell ---------- */
+#app{display:flex;min-height:100vh}
+body[dir="rtl"] #app{flex-direction:row-reverse}
+#rail{
+  width:216px;flex:0 0 216px;background:var(--ink);color:#DDE3E1;
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+#brand{padding:18px 16px 14px;border-bottom:1px solid #2E3633}
+#brand .bn{font-size:15px;font-weight:700;letter-spacing:.02em;color:#fff}
+#brand .bs{color:#8B9793;font-size:11px;margin-top:2px}
+#nav{padding:8px 0;flex:1}
+.navgroup{padding:12px 16px 4px;font-size:10.5px;color:#6E7A76;letter-spacing:.09em;text-transform:uppercase}
+.navitem{
+  display:flex;align-items:center;gap:10px;width:100%;padding:8px 16px;background:none;border:0;
+  text-align:start;cursor:pointer;color:#C8D1CE;font-size:13.5px;border-inline-start:3px solid transparent;
+}
+.navitem:hover{background:#262E2B;color:#fff}
+.navitem.on{background:#2B3532;color:#fff;border-inline-start-color:var(--amber);font-weight:600}
+.navitem .ic{width:18px;text-align:center;opacity:.85;font-size:14px}
+.navitem .badge{margin-inline-start:auto;background:var(--amber);color:#2B2100;border-radius:20px;padding:0 6px;font-size:11px;font-weight:700}
+#main{flex:1;min-width:0;display:flex;flex-direction:column}
+
+#top{
+  display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--panel);
+  border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30;flex-wrap:wrap;
+}
+#top .grow{flex:1}
+.topsel{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);padding:6px 9px;font-size:13px}
+#burger{display:none}
+#netdot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+#netdot.off{background:var(--crit)}
+#content{padding:20px;max-width:1280px;width:100%}
+
+/* ---------- primitives ---------- */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.pad{padding:16px}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row.tight{gap:8px}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.between{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.stack{display:flex;flex-direction:column;gap:4px}
+.hdr{margin-bottom:14px}
+.hdr p{margin:4px 0 0;color:var(--ink-2);font-size:13.5px;max-width:70ch}
+hr.sep{border:0;border-top:1px solid var(--line-2);margin:14px 0}
+
+.btn{
+  display:inline-flex;align-items:center;gap:6px;background:var(--teal);color:#fff;border:1px solid var(--teal);
+  padding:8px 14px;border-radius:var(--r);cursor:pointer;font-size:13.5px;font-weight:600;
+}
+.btn:hover{background:var(--teal-d)}
+.btn.ghost{background:var(--panel);color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{background:var(--panel-2)}
+.btn.warn{background:var(--amber);border-color:var(--amber);color:#2B2100}
+.btn.danger{background:var(--crit);border-color:var(--crit)}
+.btn.sm{padding:5px 10px;font-size:12.5px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,.navitem:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.tab:focus-visible,[tabindex]:focus-visible{
+  outline:2px solid var(--amber);outline-offset:2px
+}
+.big{padding:16px 18px;font-size:15px;border-radius:var(--r)}
+
+label.f{display:block;font-size:12px;color:var(--ink-2);margin-bottom:3px}
+input.f,select.f,textarea.f{
+  width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)
+}
+input.f:disabled{background:var(--panel-2);color:var(--ink-2)}
+.field{flex:1;min-width:150px;margin-bottom:10px}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:start;font-weight:600;color:var(--ink-2);font-size:12px;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:7px 8px;border-bottom:1px solid var(--line-2);vertical-align:middle}
+tr.clk{cursor:pointer}
+tr.clk:hover td{background:var(--panel-2)}
+.t-scroll{overflow-x:auto}
+td.r,th.r{text-align:end}
+
+.tag{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.t-ok{background:var(--ok-l);color:var(--ok)}
+.t-warn{background:var(--warn-l);color:var(--warn)}
+.t-crit{background:var(--crit-l);color:var(--crit)}
+.t-over{background:var(--over-l);color:var(--over)}
+.t-dead{background:var(--dead-l);color:var(--dead)}
+.t-neutral{background:var(--panel-2);color:var(--ink-2);border:1px solid var(--line-2)}
+.t-teal{background:var(--teal-l);color:var(--teal-d)}
+
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;border-inline-start:3px solid var(--line)}
+.kpi .k{font-size:12px;color:var(--ink-2)}
+.kpi .v{font-size:24px;font-weight:680;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:2px}
+.kpi .s{font-size:11.5px;color:var(--ink-3);margin-top:1px}
+.kpi.ok{border-inline-start-color:var(--ok)} .kpi.warn{border-inline-start-color:var(--amber)}
+.kpi.crit{border-inline-start-color:var(--crit)} .kpi.teal{border-inline-start-color:var(--teal)}
+.kpi.over{border-inline-start-color:var(--over)} .kpi.dead{border-inline-start-color:var(--dead)}
+
+/* ---------- hero: the daily equation ---------- */
+#eq{background:var(--ink);color:#EAEFED;border-radius:var(--r);padding:18px 18px 14px}
+#eq .eqhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+#eq .eqhead .d{color:#8B9793;font-size:12.5px}
+#eq h2{color:#fff;font-size:17px}
+.eqline{display:flex;align-items:flex-end;gap:2px;flex-wrap:wrap}
+.eqterm{padding:6px 10px 5px;min-width:74px}
+.eqterm .l{font-size:10.5px;color:#8B9793;line-height:1.3}
+.eqterm .n{font-size:20px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.eqop{font-size:17px;color:#6E7A76;padding:0 2px 9px;font-weight:600}
+.eqterm.res{background:#2B3532;border-radius:var(--r);border-bottom:3px solid var(--amber)}
+.eqterm.res .n{color:#fff;font-size:24px}
+.eqterm.open{background:#242C2A;border-radius:var(--r)}
+.eqterm .n.pos{color:#7FCF9B} .eqterm .n.neg{color:#F0A49E}
+
+/* ---------- health dial ---------- */
+.dial{display:flex;align-items:center;gap:16px}
+.dialsvg{flex:0 0 auto}
+.healthnum{font-size:34px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+
+/* ---------- one-minute control ---------- */
+#omc{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.omcell{background:var(--panel);padding:18px 16px;min-height:150px;display:flex;flex-direction:column}
+.omcell .cap{font-size:11px;letter-spacing:.14em;color:var(--ink-3);font-weight:700}
+.omcell .big{font-size:30px;font-weight:700;letter-spacing:-.03em;margin:10px 0 2px;padding:0;font-variant-numeric:tabular-nums}
+.omcell .sub{font-size:12.5px;color:var(--ink-2);margin-top:auto}
+.omcell.risk .big{color:var(--crit)}
+.omcell.action .big{color:var(--amber)}
+
+/* ---------- digital twin ---------- */
+.zone{margin-bottom:16px}
+.zonehead{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+.racks{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px}
+.rack{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:9px 10px;cursor:pointer;text-align:start}
+.rack:hover{border-color:var(--teal)}
+.rack .rn{font-family:var(--mono);font-size:12px;font-weight:700}
+.rack .ru{font-size:11px;color:var(--ink-2);margin:3px 0 5px;font-variant-numeric:tabular-nums}
+.fill{height:7px;background:var(--panel-2);border-radius:2px;overflow:hidden}
+.fill i{display:block;height:100%}
+.f-ok{background:var(--ok)} .f-warn{background:var(--amber)} .f-crit{background:var(--crit)} .f-low{background:var(--over)}
+
+/* ---------- heat map ---------- */
+.heat{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
+.hcell{padding:8px;border-radius:var(--r);cursor:pointer;border:1px solid transparent;min-height:60px}
+.hcell .hn{font-size:11.5px;font-weight:600;line-height:1.25}
+.hcell .hq{font-family:var(--mono);font-size:11px;margin-top:3px}
+.h-ok{background:var(--ok-l);color:#1C5730;border-color:#BFDCC8}
+.h-warn{background:var(--warn-l);color:#7A5200;border-color:#EBD79C}
+.h-crit{background:var(--crit-l);color:#8A1C16;border-color:#EFBDB9}
+.h-over{background:var(--over-l);color:#154577;border-color:#B9CFE8}
+.h-dead{background:var(--dead-l);color:#4C2B73;border-color:#CFC0E4}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);margin-bottom:10px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-inline-end:5px}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:14px;overflow-x:auto}
+.tab{background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;cursor:pointer;font-size:13.5px;color:var(--ink-2);white-space:nowrap}
+.tab.on{border-bottom-color:var(--teal);color:var(--ink);font-weight:600}
+
+/* ---------- drawer / modal ---------- */
+#scrim{position:fixed;inset:0;background:rgba(20,26,24,.5);z-index:60;display:none}
+#scrim.on{display:block}
+#drawer{
+  position:fixed;top:0;inset-inline-end:0;height:100vh;width:min(560px,100%);background:var(--ground);
+  z-index:70;transform:translateX(102%);transition:transform .22s ease;overflow-y:auto;box-shadow:-2px 0 18px rgba(0,0,0,.18)
+}
+body[dir="rtl"] #drawer{transform:translateX(-102%)}
+#drawer.on{transform:none !important}
+#drawer .dh{position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;z-index:2}
+#drawer .db{padding:16px}
+.x{background:none;border:0;font-size:22px;line-height:1;cursor:pointer;color:var(--ink-2);padding:0 4px}
+@media (prefers-reduced-motion:reduce){#drawer{transition:none}}
+
+/* ---------- misc ---------- */
+.stepflow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px}
+.step{padding:3px 9px;border-radius:20px;background:var(--panel-2);color:var(--ink-3);border:1px solid var(--line-2)}
+.step.done{background:var(--ok-l);color:var(--ok);border-color:#BFDCC8}
+.step.now{background:var(--teal);color:#fff;border-color:var(--teal);font-weight:600}
+.note{background:var(--amber-l);border:1px solid #EBD79C;border-inline-start:3px solid var(--amber);border-radius:var(--r);padding:10px 12px;font-size:13px}
+.note.teal{background:var(--teal-l);border-color:#BCD8D6;border-inline-start-color:var(--teal)}
+.note.crit{background:var(--crit-l);border-color:#EFBDB9;border-inline-start-color:var(--crit)}
+.why{font-size:12.5px;color:var(--ink-2);margin-top:5px;padding-inline-start:10px;border-inline-start:2px solid var(--line)}
+.empty{text-align:center;padding:36px 16px;color:var(--ink-2)}
+.empty p{margin:6px 0 14px;font-size:13.5px}
+#toast{position:fixed;inset-inline-start:50%;transform:translateX(-50%);bottom:22px;z-index:90;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{background:var(--ink);color:#fff;padding:10px 16px;border-radius:var(--r);font-size:13.5px;box-shadow:0 4px 18px rgba(0,0,0,.25);max-width:92vw}
+.toast.bad{background:var(--crit)}
+.bar{height:6px;background:var(--panel-2);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--teal)}
+.qty{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600}
+.chat{display:flex;flex-direction:column;gap:10px;max-height:52vh;overflow-y:auto;padding-inline-end:4px}
+.msg{padding:10px 12px;border-radius:var(--r);max-width:86%;font-size:13.5px}
+.msg.u{background:var(--teal);color:#fff;align-self:flex-end;border-end-end-radius:0}
+.msg.a{background:var(--panel);border:1px solid var(--line);align-self:flex-start;border-end-start-radius:0}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:5px 11px;font-size:12.5px;cursor:pointer}
+.chip:hover{border-color:var(--teal);color:var(--teal-d)}
+#scanbox{background:var(--ink);border-radius:var(--r);padding:14px;color:#DDE3E1;text-align:center}
+#scanvid{width:100%;max-width:340px;border-radius:var(--r);background:#000;display:none;margin:0 auto}
+.abc{display:grid;grid-template-columns:auto repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;font-size:13px}
+.abc>div{background:var(--panel);padding:10px;text-align:center}
+.abc .hd{background:var(--panel-2);font-weight:600;font-size:12px;color:var(--ink-2)}
+.abc .cnt{font-size:18px;font-weight:650;font-variant-numeric:tabular-nums}
+
+@media print{
+  #rail,#top,.noprint{display:none !important}
+  body{background:#fff} #content{padding:0;max-width:none}
+  .panel{border-color:#999;break-inside:avoid}
+}
+@media (max-width:1080px){ #omc{grid-template-columns:repeat(2,1fr)} .g4{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:860px){
+  #rail{position:fixed;z-index:80;transform:translateX(-102%);transition:transform .2s}
+  body[dir="rtl"] #rail{transform:translateX(102%)}
+  #rail.on{transform:none !important}
+  #burger{display:inline-flex}
+  #content{padding:14px}
+  .g3,.g2{grid-template-columns:1fr}
+  .omcell{min-height:110px} .omcell .big{font-size:24px}
+  h1{font-size:21px}
+}
+</style>
+</head>
+<body class="en" dir="ltr">
+<div id="app">
+  <aside id="rail">
+    <div id="brand">
+      <div class="bn" id="brandName">SMARTWARE 360</div>
+      <div class="bs" id="brandSub">Unity Facilities Management</div>
+    </div>
+    <nav id="nav"></nav>
+  </aside>
+  <div id="main">
+    <header id="top">
+      <button class="btn ghost sm" id="burger" onclick="UI.toggleRail()">☰</button>
+      <select class="topsel" id="whSel" onchange="UI.setWarehouse(this.value)"></select>
+      <select class="topsel" id="userSel" onchange="UI.setUser(this.value)"></select>
+      <span class="grow"></span>
+      <span class="xs muted num" id="clock"></span>
+      <span id="netdot" title="connection"></span>
+      <button class="btn ghost sm" onclick="UI.toggleLang()" id="langBtn">العربية</button>
+    </header>
+    <main id="content"></main>
+  </div>
+</div>
+<div id="scrim" onclick="UI.closeDrawer()"></div>
+<aside id="drawer" role="dialog" aria-modal="true"><div class="dh"><h3 id="drawerTitle"></h3><button class="x" onclick="UI.closeDrawer()" aria-label="Close">×</button></div><div class="db" id="drawerBody"></div></aside>
+<div id="toast"></div>
+<script>
+"use strict";
+/* ==========================================================================
+   SMARTWARE 360 — Phase 1 prototype
+   Single file. No build step, no CDN, no external calls.
+   Layer 1: data model + seed. Stock is NEVER stored as an editable number —
+   every balance is derived from the append-only transaction ledger.
+   ========================================================================== */
+
+/* ---- deterministic RNG so the demo is identical on every machine ---- */
+let _s = 20260915;
+function rnd(){ _s = (_s * 1664525 + 1013904223) % 4294967296; return _s / 4294967296; }
+function ri(a,b){ return a + Math.floor(rnd()*(b-a+1)); }
+function pick(a){ return a[ri(0,a.length-1)]; }
+
+const DAY = 86400000;
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+const T0 = TODAY.getTime();
+const dstr = ms => new Date(ms).toISOString().slice(0,10);
+const tstr = ms => new Date(ms).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+
+const DB = {
+  settings:{
+    company:'Unity Facilities Management & Services',
+    product:'SMARTWARE 360',
+    currency:'QAR',
+    lang:'en',
+    allowNegative:false,
+    adjustThresholds:[{max:500,role:'Warehouse Manager'},{max:5000,role:'Operations Manager'},{max:Infinity,role:'General Manager'}],
+    deadDays:90,
+    reportTime:'06:30',
+    taxRate:0,            // configurable — nothing about tax is hard-coded
+    fefo:true
+  },
+  roles:{
+    'Super Administrator':['*'],
+    'Warehouse Manager':['dash','omc','inv','scan','recv','issue','xfer','count','req','adj','approve','twin','heat','intel','sup','rep','ask','audit','set'],
+    'Storekeeper':['dash','inv','scan','recv','issue','xfer','count','req','twin','ask'],
+    'Procurement Officer':['dash','inv','intel','sup','rep','ask'],
+    'Finance':['dash','omc','inv','intel','rep','ask'],
+    'Department User':['req','inv','ask'],
+    'Auditor':['dash','inv','rep','audit','ask','intel']
+  },
+  users:[
+    {id:'U1',name:'Irshaad Foumie',role:'Super Administrator',wh:'*'},
+    {id:'U2',name:'Rashid Al-Kuwari',role:'Warehouse Manager',wh:'*'},
+    {id:'U3',name:'Saleem Hassan',role:'Storekeeper',wh:'WH-01'},
+    {id:'U4',name:'Anil Kumar',role:'Storekeeper',wh:'WH-02'},
+    {id:'U5',name:'Fatima Nasser',role:'Procurement Officer',wh:'*'},
+    {id:'U6',name:'Jomon George',role:'Finance',wh:'*'},
+    {id:'U7',name:'Mary Fernandez',role:'Department User',wh:'*'},
+    {id:'U8',name:'External Auditor',role:'Auditor',wh:'*'}
+  ],
+  warehouses:[
+    {id:'WH-01',name:'Main Warehouse',nameAr:'المستودع الرئيسي',site:'Industrial Area St 38, Doha'},
+    {id:'WH-02',name:'Maintenance Store',nameAr:'مخزن الصيانة',site:'Al Sadd Tower, Doha'},
+    {id:'WH-03',name:'Cleaning Materials Store',nameAr:'مخزن مواد التنظيف',site:'Industrial Area St 38, Doha'},
+    {id:'WH-04',name:'Spare Parts Store',nameAr:'مخزن قطع الغيار',site:'Birkat Al Awamer'}
+  ],
+  departments:[
+    {id:'D1',name:'Cleaning Operations',nameAr:'عمليات التنظيف'},
+    {id:'D2',name:'MEP Maintenance',nameAr:'صيانة الكهروميكانيك'},
+    {id:'D3',name:'HSE',nameAr:'الصحة والسلامة'},
+    {id:'D4',name:'Fleet & Logistics',nameAr:'الأسطول واللوجستيات'},
+    {id:'D5',name:'Administration',nameAr:'الإدارة'}
+  ],
+  projects:[
+    {id:'P1',name:'Lusail Towers FM Contract',nameAr:'عقد أبراج لوسيل'},
+    {id:'P2',name:'Msheireb Retail Cleaning',nameAr:'تنظيف مشيرب'},
+    {id:'P3',name:'Hamad Airport Support',nameAr:'دعم مطار حمد'},
+    {id:'P4',name:'Education City Facilities',nameAr:'مرافق المدينة التعليمية'}
+  ],
+  suppliers:[
+    {id:'S1',name:'Al Mana Trading W.L.L.',contact:'Yousef Al Mana',phone:'+974 4431 2200',email:'sales@almanatrading.qa',terms:'30 days',lead:7},
+    {id:'S2',name:'Gulf Safety Supplies',contact:'Praveen Nair',phone:'+974 4455 9080',email:'orders@gulfsafety.qa',terms:'45 days',lead:12},
+    {id:'S3',name:'Doha Electrical Est.',contact:'Ahmed Siddiqui',phone:'+974 4468 1170',email:'info@dohaelec.qa',terms:'30 days',lead:5},
+    {id:'S4',name:'Qatar Clean Chem',contact:'Layla Mahmoud',phone:'+974 4412 7744',email:'sales@qcleanchem.qa',terms:'Cash',lead:3},
+    {id:'S5',name:'Peninsula Spare Parts',contact:'Rohit Menon',phone:'+974 4487 3311',email:'parts@peninsula.qa',terms:'60 days',lead:21}
+  ],
+  categories:['Cleaning Materials','PPE','Electrical','Plumbing','HVAC','Tools','Consumables','Safety Equipment','Office Supplies'],
+  categoriesAr:{'Cleaning Materials':'مواد التنظيف','PPE':'معدات الوقاية','Electrical':'كهربائي','Plumbing':'سباكة','HVAC':'تكييف','Tools':'أدوات','Consumables':'مستهلكات','Safety Equipment':'معدات السلامة','Office Supplies':'قرطاسية'},
+  locations:[], items:[], txns:[], requests:[], counts:[], adjustments:[], audit:[], notifications:[], queue:[]
+};
+
+/* ---------------- locations: Company > Warehouse > Zone > Rack > Shelf > Bin -------------- */
+(function buildLocations(){
+  const plan = {
+    'WH-01':{zones:['A','B','C'],racks:6,shelves:4,bins:3,cap:600},
+    'WH-02':{zones:['A','B'],racks:4,shelves:3,bins:3,cap:400},
+    'WH-03':{zones:['A'],racks:5,shelves:3,bins:2,cap:500},
+    'WH-04':{zones:['A','B'],racks:4,shelves:4,bins:2,cap:300}
+  };
+  for(const wh in plan){
+    const p = plan[wh];
+    p.zones.forEach(z=>{
+      for(let r=1;r<=p.racks;r++) for(let s=1;s<=p.shelves;s++) for(let b=1;b<=p.bins;b++){
+        const pad=n=>String(n).padStart(2,'0');
+        DB.locations.push({
+          id:`${wh}/${z}/R${pad(r)}/S${pad(s)}/B${pad(b)}`,
+          wh, zone:z, rack:`R${pad(r)}`, shelf:`S${pad(s)}`, bin:`B${pad(b)}`,
+          capacity:Math.round(p.cap/(p.shelves*p.bins))
+        });
+      }
+    });
+  }
+})();
+const locsOf = wh => DB.locations.filter(l=>l.wh===wh);
+const LOC = id => DB.locations.find(l=>l.id===id);
+
+/* ---------------- item master ---------------- */
+const ITEM_SEED = [
+ ['Floor Cleaner Concentrate 5L','منظف أرضيات مركز ٥ لتر','Cleaning Materials','Drum','S4',38,120,400,1,true],
+ ['Glass Cleaner 750ml','منظف زجاج ٧٥٠ مل','Cleaning Materials','Bottle','S4',9.5,200,700,1,true],
+ ['Disinfectant Liquid 5L','سائل مطهر ٥ لتر','Cleaning Materials','Drum','S4',45,80,300,1,true],
+ ['Heavy Duty Degreaser 20L','مزيل شحوم ثقيل ٢٠ لتر','Cleaning Materials','Drum','S4',210,20,80,1,true],
+ ['Microfibre Cloth Pack (10)','أقمشة ميكروفايبر (١٠)','Cleaning Materials','Pack','S1',26,150,500,0,false],
+ ['Mop Head Cotton 400g','رأس ممسحة قطن ٤٠٠ جم','Cleaning Materials','Piece','S1',14,180,600,0,false],
+ ['Garbage Bag 100x120 (50s)','أكياس نفايات ١٠٠×١٢٠','Cleaning Materials','Roll','S4',32,240,900,0,false],
+ ['Hand Soap Refill 5L','صابون يدين ٥ لتر','Cleaning Materials','Drum','S4',52,60,220,1,true],
+ ['Safety Helmet White','خوذة سلامة بيضاء','PPE','Piece','S2',38,90,350,0,false],
+ ['Safety Goggles Clear','نظارات سلامة شفافة','PPE','Piece','S2',22,120,400,0,false],
+ ['Nitrile Gloves Box (100)','قفازات نتريل (١٠٠)','PPE','Box','S2',34,200,800,1,true],
+ ['Cut Resistant Gloves L','قفازات مقاومة للقطع','PPE','Pair','S2',29,80,300,0,false],
+ ['Safety Shoes S3 (pair)','أحذية سلامة S3','PPE','Pair','S2',165,60,240,0,false],
+ ['Hi-Vis Vest Orange','سترة عاكسة برتقالية','PPE','Piece','S2',26,140,500,0,false],
+ ['Dust Mask FFP2 (20)','كمامات FFP2 (٢٠)','PPE','Box','S2',48,70,260,1,true],
+ ['Ear Plugs Box (200)','سدادات أذن (٢٠٠)','PPE','Box','S2',62,25,90,0,false],
+ ['Coverall Cotton Blue XL','أفرول قطني أزرق','PPE','Piece','S2',88,50,200,0,false],
+ ['LED Tube 18W 1200mm','أنبوب LED ١٨ واط','Electrical','Piece','S3',21,200,750,0,false],
+ ['LED Panel 40W 600x600','لوحة LED ٤٠ واط','Electrical','Piece','S3',78,60,240,0,false],
+ ['MCB 32A Single Pole','قاطع ٣٢ أمبير','Electrical','Piece','S3',34,90,320,0,false],
+ ['Cable 3x2.5mm (100m)','كابل ٣×٢٫٥ مم','Electrical','Roll','S3',420,12,45,0,false],
+ ['Socket Outlet 13A','مقبس ١٣ أمبير','Electrical','Piece','S3',18,140,520,0,false],
+ ['Emergency Light 3hr','إضاءة طوارئ ٣ ساعات','Electrical','Piece','S3',145,30,110,0,false],
+ ['PVC Pipe 110mm x 3m','أنبوب PVC ١١٠ مم','Plumbing','Piece','S1',54,60,220,0,false],
+ ['Ball Valve 1/2"','محبس كروي ١/٢','Plumbing','Piece','S1',23,110,420,0,false],
+ ['Flexible Hose 40cm','خرطوم مرن ٤٠ سم','Plumbing','Piece','S1',16,130,480,0,false],
+ ['Silicone Sealant 280ml','سيليكون ٢٨٠ مل','Plumbing','Tube','S1',13,160,560,1,true],
+ ['Toilet Seat Standard','مقعد مرحاض','Plumbing','Piece','S1',72,40,150,0,false],
+ ['AC Filter 20x20 Washable','فلتر مكيف قابل للغسل','HVAC','Piece','S5',58,80,300,0,false],
+ ['FCU Belt A-42','سير وحدة تكييف','HVAC','Piece','S5',44,35,130,0,false],
+ ['Refrigerant R410a 11.3kg','غاز تبريد R410a','HVAC','Cylinder','S5',690,8,30,1,false],
+ ['Thermostat Digital','ثرموستات رقمي','HVAC','Piece','S5',210,25,95,0,false],
+ ['Condenser Fan Motor 1/4HP','موتور مروحة مكثف','HVAC','Piece','S5',480,10,40,0,false],
+ ['Cordless Drill 18V','دريل لاسلكي ١٨ فولت','Tools','Piece','S1',540,8,28,0,false],
+ ['Tool Kit 42pc','طقم عدة ٤٢ قطعة','Tools','Set','S1',320,10,35,0,false],
+ ['Extension Ladder 4m','سلم ٤ متر','Tools','Piece','S1',760,5,18,0,false],
+ ['Measuring Tape 5m','شريط قياس ٥ متر','Tools','Piece','S1',19,60,220,0,false],
+ ['Fire Extinguisher 6kg DCP','طفاية حريق ٦ كجم','Safety Equipment','Piece','S2',185,40,150,1,false],
+ ['First Aid Kit Wall Mount','حقيبة إسعافات أولية','Safety Equipment','Piece','S2',260,15,55,1,false],
+ ['Wet Floor Sign','لافتة أرضية مبللة','Safety Equipment','Piece','S2',42,70,250,0,false],
+ ['Safety Barrier Tape 500m','شريط تحذير ٥٠٠ متر','Safety Equipment','Roll','S2',38,45,170,0,false],
+ ['A4 Paper Ream 80gsm','ورق A4 رزمة','Office Supplies','Ream','S1',14,120,450,0,false],
+ ['Printer Toner Black','حبر طابعة أسود','Office Supplies','Piece','S1',310,14,50,0,false],
+ ['Cleaning Trolley Janitor','عربة تنظيف','Consumables','Piece','S1',890,6,22,0,false]
+];
+const CATCODE={'Cleaning Materials':'CLN','PPE':'PPE','Electrical':'ELC','Plumbing':'PLB','HVAC':'HVA',
+  'Tools':'TLS','Consumables':'CNS','Safety Equipment':'SAF','Office Supplies':'OFS'};
+(function buildItems(){
+  const whPool = {'Cleaning Materials':['WH-03','WH-01'],'PPE':['WH-01'],'Electrical':['WH-02','WH-01'],
+    'Plumbing':['WH-02'],'HVAC':['WH-04','WH-02'],'Tools':['WH-04','WH-01'],
+    'Safety Equipment':['WH-01'],'Office Supplies':['WH-01'],'Consumables':['WH-01']};
+  ITEM_SEED.forEach((s,i)=>{
+    const [name,nameAr,cat,uom,sup,cost,min,max,exp,batched] = s;
+    const n = i+1;
+    const id = 'ITM-'+String(1000+n);
+    const sku = CATCODE[cat]+'-'+String(100+n);
+    const home = pick(whPool[cat]||['WH-01']);
+    DB.items.push({
+      id, sku, barcode:'628'+String(4000000+n*37).slice(0,7), name, nameAr, cat,
+      subcat:'', brand:pick(['Karcher','3M','Schneider','Ariston','Generic','Honeywell','Bosch']),
+      model:'M'+ri(100,999), partNo:'PN-'+ri(10000,99999), uom,
+      min, max, reorder:Math.round(min*1.35), reorderQty:Math.round((max-min)*0.6),
+      supplier:sup, cost, price:+(cost*1.18).toFixed(2), lead:DB.suppliers.find(x=>x.id===sup).lead,
+      expiryControlled:!!exp, batched:!!batched, homeWh:home,
+      spec:`${uom} · ${cat}`, alt:'', status:'Active', img:''
+    });
+  });
+})();
+const ITEM = id => DB.items.find(i=>i.id===id);
+const findItem = code => { const c=(code||'').trim().toLowerCase();
+  return DB.items.find(i=>i.id.toLowerCase()===c||i.sku.toLowerCase()===c||i.barcode===c||i.partNo.toLowerCase()===c) ||
+         DB.items.find(i=>i.name.toLowerCase().includes(c)||i.nameAr.includes(code)) ||
+         (function(){ const w=c.replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(x=>x.length>2).map(x=>x.replace(/s$/,''));
+           if(!w.length) return null;
+           let best=null,score=0;
+           DB.items.forEach(i=>{ const n=i.name.toLowerCase();
+             const hit=w.filter(x=>n.includes(x)).length;
+             if(hit>score&&hit>=Math.min(2,w.length)){ score=hit; best=i; } });
+           return best; })(); };
+
+/* ---------------- append-only ledger ---------------- */
+var UI = null;              // assigned in Layer 4; declared here so seeding can run first
+let _txSeq = 0;
+function post(t){
+  _txSeq++;
+  const tx = Object.assign({
+    id:'TX'+String(100000+_txSeq), ts:Date.now(), user:(UI&&UI.user)?UI.user.name:'System',
+    batch:'', expiry:'', ref:'', party:'', partyType:'', reason:'', note:'', photo:false, reversed:false
+  }, t);
+  DB.txns.push(tx);
+  BAL.dirty = true;
+  return tx;
+}
+function logAudit(action,entity,oldV,newV,reason){
+  DB.audit.push({id:'AU'+(DB.audit.length+1), ts:Date.now(), user:(UI&&UI.user)?UI.user.name:'System',
+    action, entity, old:oldV==null?'':String(oldV), neu:newV==null?'':String(newV), reason:reason||'', device:'Web · Doha'});
+}
+
+/* ---------------- balance engine (derived, never stored) ---------------- */
+const BAL = {dirty:true, byItemLoc:{}, byItem:{}, byItemWh:{}, byBatch:{}, lastMove:{}};
+function rebuild(){
+  const a={},b={},c={},d={},lm={};
+  for(const t of DB.txns){
+    if(t.reversed) continue;
+    const loc = t.locId||''; const it = t.itemId;
+    a[it+'|'+loc] = (a[it+'|'+loc]||0)+t.qty;
+    b[it] = (b[it]||0)+t.qty;
+    const wh = t.wh||(LOC(loc)||{}).wh||'';
+    c[it+'|'+wh] = (c[it+'|'+wh]||0)+t.qty;
+    if(t.batch) d[it+'|'+t.batch] = {qty:((d[it+'|'+t.batch]||{}).qty||0)+t.qty, expiry:t.expiry||((d[it+'|'+t.batch]||{}).expiry||'')};
+    if(t.qty<0 || t.type==='Receive') lm[it] = Math.max(lm[it]||0, t.ts);
+  }
+  BAL.byItemLoc=a; BAL.byItem=b; BAL.byItemWh=c; BAL.byBatch=d; BAL.lastMove=lm; BAL.dirty=false;
+}
+const sync = () => { if(BAL.dirty) rebuild(); };
+function onHand(itemId,wh){ sync(); return wh&&wh!=='*' ? (BAL.byItemWh[itemId+'|'+wh]||0) : (BAL.byItem[itemId]||0); }
+function atLoc(itemId,locId){ sync(); return BAL.byItemLoc[itemId+'|'+locId]||0; }
+function locsFor(itemId,wh){ sync();
+  return Object.keys(BAL.byItemLoc).filter(k=>k.startsWith(itemId+'|')&&BAL.byItemLoc[k]>0)
+    .map(k=>({loc:k.split('|')[1], qty:BAL.byItemLoc[k]}))
+    .filter(x=>!wh||wh==='*'||(LOC(x.loc)||{}).wh===wh)
+    .sort((a,b)=>b.qty-a.qty); }
+function batchesFor(itemId){ sync();
+  return Object.keys(BAL.byBatch).filter(k=>k.startsWith(itemId+'|')&&BAL.byBatch[k].qty>0)
+    .map(k=>({batch:k.split('|')[1], qty:BAL.byBatch[k].qty, expiry:BAL.byBatch[k].expiry}))
+    .sort((a,b)=> (a.expiry||'9999').localeCompare(b.expiry||'9999')); }
+function reserved(itemId,wh){
+  return DB.requests.filter(r=>r.status==='Reserved'&&(!wh||wh==='*'||r.wh===wh))
+    .reduce((s,r)=>s+r.lines.filter(l=>l.itemId===itemId).reduce((x,l)=>x+(l.approvedQty-l.issuedQty),0),0); }
+const available = (itemId,wh) => onHand(itemId,wh) - reserved(itemId,wh);
+
+/* ---------------- movement analytics ---------------- */
+function issuesIn(itemId,days,wh){
+  const from = Date.now()-days*DAY;
+  return DB.txns.filter(t=>!t.reversed&&t.itemId===itemId&&t.type==='Issue'&&t.ts>=from&&(!wh||wh==='*'||t.wh===wh))
+    .reduce((s,t)=>s-t.qty,0); }
+const avgDaily = (itemId,wh) => +(issuesIn(itemId,90,wh)/90).toFixed(3);
+function reorderPoint(it,wh){
+  const ad = avgDaily(it.id,wh), lead = it.lead;
+  const safety = Math.ceil(ad*lead*0.5);
+  return {avgDaily:ad, lead, safety, rop:Math.ceil(ad*lead+safety)}; }
+function daysToZero(it,wh){ const ad=avgDaily(it.id,wh); if(ad<=0) return Infinity; return Math.floor(available(it.id,wh)/ad); }
+function lastMoved(itemId){ sync(); return BAL.lastMove[itemId]||0; }
+function idleDays(itemId){ const lm=lastMoved(itemId); return lm? Math.floor((Date.now()-lm)/DAY) : 999; }
+
+function statusOf(it,wh){
+  const oh = onHand(it.id,wh), av = available(it.id,wh);
+  const idle = idleDays(it.id);
+  if(oh<=0) return 'crit';
+  if(idle>=DB.settings.deadDays && oh>0) return 'dead';
+  if(av<=it.min*0.4) return 'crit';
+  if(av<=it.reorder) return 'warn';
+  if(oh>it.max*1.15) return 'over';
+  return 'ok';
+}
+const STATUS_LABEL = {ok:'Healthy',warn:'Low stock',crit:'Critical',over:'Overstock',dead:'Dead stock'};
+const STATUS_AR = {ok:'سليم',warn:'مخزون منخفض',crit:'حرج',over:'فائض',dead:'راكد'};
+
+function valueOf(it,wh){ return onHand(it.id,wh)*it.cost; }
+function inventoryValue(wh){ return DB.items.reduce((s,i)=>s+Math.max(0,valueOf(i,wh)),0); }
+function itemsIn(wh){ return DB.items.filter(i=>!wh||wh==='*'||onHand(i.id,wh)!==0||i.homeWh===wh); }
+
+/* ---------------- expiry (FEFO) ---------------- */
+function expiringBatches(wh,days){
+  const out=[]; const lim = Date.now()+days*DAY;
+  DB.items.filter(i=>i.expiryControlled).forEach(i=>{
+    batchesFor(i.id).forEach(b=>{
+      if(!b.expiry) return;
+      const e = new Date(b.expiry).getTime();
+      if(e<=lim){
+        const ls = locsFor(i.id,wh);
+        if(wh&&wh!=='*'&&!ls.length) return;
+        out.push({item:i, batch:b.batch, expiry:b.expiry, qty:b.qty, days:Math.floor((e-Date.now())/DAY), value:b.qty*i.cost});
+      }
+    });
+  });
+  return out.sort((a,b)=>a.days-b.days);
+}
+function fefoBatch(itemId){ const bs=batchesFor(itemId).filter(b=>b.expiry); return bs.length?bs[0]:null; }
+
+/* ---------------- day movement ---------------- */
+function dayFlows(wh,dayStart){
+  const s = dayStart!==undefined?dayStart:T0, e = s+DAY;
+  const inRange = DB.txns.filter(t=>!t.reversed&&t.ts>=s&&t.ts<e&&(!wh||wh==='*'||t.wh===wh));
+  const sum = f => inRange.filter(f).reduce((a,t)=>a+Math.abs(t.qty),0);
+  return {
+    receipts:sum(t=>t.type==='Receive'),
+    returnsIn:sum(t=>t.type==='Return'),
+    transferIn:sum(t=>t.type==='Transfer'&&t.qty>0),
+    issues:sum(t=>t.type==='Issue'),
+    returnsOut:sum(t=>t.type==='ReturnToSupplier'),
+    transferOut:sum(t=>t.type==='Transfer'&&t.qty<0),
+    adjustments:inRange.filter(t=>t.type==='Adjust').reduce((a,t)=>a+t.qty,0),
+    count:inRange.length
+  };
+}
+function closingStock(wh,at){
+  const lim = at!==undefined?at:Date.now();
+  return DB.txns.filter(t=>!t.reversed&&t.ts<lim&&(!wh||wh==='*'||t.wh===wh)).reduce((a,t)=>a+t.qty,0);
+}
+function dailyLedger(wh){
+  const open = closingStock(wh,T0), f = dayFlows(wh);
+  const close = open + f.receipts + f.returnsIn + f.transferIn - f.issues - f.returnsOut - f.transferOut + f.adjustments;
+  return Object.assign({opening:open, closing:close}, f);
+}
+
+/* ---------------- warehouse health score ---------------- */
+function healthScore(wh){
+  const items = itemsIn(wh); const n = items.length||1;
+  const low = items.filter(i=>['warn','crit'].includes(statusOf(i,wh))).length;
+  const outs = items.filter(i=>onHand(i.id,wh)<=0).length;
+  const over = items.filter(i=>statusOf(i,wh)==='over').length;
+  const dead = items.filter(i=>statusOf(i,wh)==='dead').length;
+  const expired = expiringBatches(wh,0).length;
+  const pendReq = DB.requests.filter(r=>r.status==='Requested'&&(wh==='*'||r.wh===wh)).length;
+  const pendAdj = DB.adjustments.filter(a=>a.status==='Pending'&&(wh==='*'||a.wh===wh)).length;
+  const acc = countAccuracy(wh);
+  const util = storageUtil(wh);
+  const parts = [
+    {k:'Stock accuracy', w:22, v:acc/100, why:`Physical counts matched the system on ${acc.toFixed(1)}% of counted lines.`},
+    {k:'Availability', w:20, v:1-Math.min(1,low/n*1.5), why:`${low} of ${n} SKUs are at or below reorder level.`},
+    {k:'Out of stock', w:12, v:1-Math.min(1,outs/n*3), why:`${outs} SKUs are at zero.`},
+    {k:'Dead stock', w:12, v:1-Math.min(1,dead/n*3), why:`${dead} SKUs have not moved for ${DB.settings.deadDays}+ days.`},
+    {k:'Overstock', w:8, v:1-Math.min(1,over/n*3), why:`${over} SKUs hold more than their maximum level.`},
+    {k:'Expiry control', w:8, v:expired?0.2:1, why: expired?`${expired} batches are already expired.`:'No expired batches in stock.'},
+    {k:'Open transactions', w:10, v:1-Math.min(1,(pendReq+pendAdj)/12), why:`${pendReq} requests and ${pendAdj} adjustments are waiting for approval.`},
+    {k:'Storage utilisation', w:8, v:util>95?0.4:(util<25?0.6:1), why:`Racking is ${util.toFixed(0)}% utilised.`}
+  ];
+  const score = Math.round(parts.reduce((s,p)=>s+p.w*Math.max(0,Math.min(1,p.v)),0));
+  return {score, parts, band: score>=90?'Excellent':score>=80?'Good':score>=65?'Fair':'Needs attention'};
+}
+function countAccuracy(wh){
+  const cs = DB.counts.filter(c=>c.status==='Closed'&&(wh==='*'||c.wh===wh));
+  let lines=0, exact=0;
+  cs.forEach(c=>c.lines.forEach(l=>{ lines++; if(l.physical===l.system) exact++; }));
+  return lines? (exact/lines*100) : 100;
+}
+function storageUtil(wh){
+  sync(); const ls = wh==='*'?DB.locations:locsOf(wh);
+  let cap=0, used=0;
+  ls.forEach(l=>{ cap+=l.capacity;
+    Object.keys(BAL.byItemLoc).forEach(k=>{ if(k.endsWith('|'+l.id)) used+=Math.max(0,BAL.byItemLoc[k]); }); });
+  return cap? Math.min(100, used/cap*100):0;
+}
+function rackUtil(wh){
+  sync(); const map={};
+  locsOf(wh).forEach(l=>{ const key=l.zone+'|'+l.rack;
+    map[key] = map[key]||{zone:l.zone,rack:l.rack,cap:0,used:0,bins:[]};
+    let u=0; Object.keys(BAL.byItemLoc).forEach(k=>{ if(k.endsWith('|'+l.id)) u+=Math.max(0,BAL.byItemLoc[k]); });
+    map[key].cap+=l.capacity; map[key].used+=u; map[key].bins.push({loc:l,used:u});
+  });
+  return Object.values(map);
+}
+
+/* ---------------- ABC / XYZ ---------------- */
+function abcxyz(wh){
+  const items = itemsIn(wh).map(i=>{
+    const annual = issuesIn(i.id,90,wh)*4;
+    return {i, value:annual*i.cost, cv:demandCV(i.id,wh)};
+  }).sort((a,b)=>b.value-a.value);
+  const total = items.reduce((s,x)=>s+x.value,0)||1;
+  let cum=0;
+  items.forEach(x=>{ cum+=x.value; const p=cum/total;
+    x.abc = p<=0.8?'A':p<=0.95?'B':'C';
+    x.xyz = x.cv<0.5?'X':x.cv<1?'Y':'Z';
+    x.cls = x.abc+x.xyz; });
+  return items;
+}
+function demandCV(itemId,wh){
+  const m=[0,0,0]; for(let k=0;k<3;k++){
+    const from=Date.now()-(k+1)*30*DAY, to=Date.now()-k*30*DAY;
+    m[k]=DB.txns.filter(t=>!t.reversed&&t.itemId===itemId&&t.type==='Issue'&&t.ts>=from&&t.ts<to&&(wh==='*'||t.wh===wh)).reduce((s,t)=>s-t.qty,0);
+  }
+  const mean=(m[0]+m[1]+m[2])/3; if(!mean) return 2;
+  const sd=Math.sqrt(m.reduce((s,x)=>s+(x-mean)**2,0)/3);
+  return sd/mean;
+}
+
+/* ---------------- risk, reorder, anomalies, forecast ---------------- */
+function riskScore(it,wh){
+  const r = reorderPoint(it,wh), av = available(it.id,wh), dz = daysToZero(it,wh);
+  const alt = DB.items.filter(x=>x.cat===it.cat&&x.id!==it.id&&x.supplier!==it.supplier).length;
+  const f=[];
+  let s=0;
+  if(dz<it.lead){ s+=35; f.push(`Cover of ${dz===Infinity?'—':dz} days is shorter than the ${it.lead}-day supplier lead time.`); }
+  else if(dz<it.lead*2){ s+=18; f.push(`Only ${dz} days of cover against a ${it.lead}-day lead time.`); }
+  if(av<=r.rop){ s+=20; f.push(`Available stock ${av} is at or below the reorder point of ${r.rop}.`); }
+  if(av<=0){ s+=20; f.push('Item is out of stock.'); }
+  if(it.lead>=14){ s+=12; f.push(`Long supplier lead time (${it.lead} days).`); }
+  if(!alt){ s+=8; f.push('No alternative supplier is recorded for this category.'); }
+  const ax = abcxyz(wh).find(x=>x.i.id===it.id);
+  if(ax&&ax.abc==='A'){ s+=10; f.push('Class A item — high share of inventory spend.'); }
+  return {score:Math.min(100,s), factors:f, band: s>=70?'HIGH':s>=40?'MEDIUM':'LOW'};
+}
+function reorderList(wh){
+  return itemsIn(wh).map(it=>{
+    const r=reorderPoint(it,wh), av=available(it.id,wh);
+    return Object.assign({it, available:av, suggest:Math.max(it.reorderQty, Math.ceil(r.rop*1.6-av)), dz:daysToZero(it,wh)}, r);
+  }).filter(x=>x.available<=x.rop||x.available<=x.it.reorder)
+    .sort((a,b)=>a.dz-b.dz);
+}
+function deadStock(wh){
+  return itemsIn(wh).filter(i=>onHand(i.id,wh)>0&&idleDays(i.id)>=DB.settings.deadDays)
+    .map(i=>({it:i, idle:idleDays(i.id), qty:onHand(i.id,wh), value:valueOf(i,wh)}))
+    .sort((a,b)=>b.value-a.value);
+}
+function anomalies(wh){
+  const out=[];
+  DB.items.forEach(i=>{
+    const recent = issuesIn(i.id,30,wh), base = issuesIn(i.id,90,wh)/3;
+    if(base>4 && recent > base*1.3)
+      out.push({sev:'warn', title:`${i.name} consumption is up ${Math.round((recent/base-1)*100)}% this month`,
+        why:`30-day issues are ${recent} ${i.uom} against a 90-day monthly average of ${base.toFixed(0)}. Flagged for review — this is a deviation, not evidence of misuse.`});
+  });
+  DB.txns.filter(t=>!t.reversed&&t.type==='Adjust'&&Math.abs(t.qty*(ITEM(t.itemId)||{cost:0}).cost)>2000&&t.ts>Date.now()-30*DAY)
+    .forEach(t=>out.push({sev:'crit', title:`Large adjustment on ${(ITEM(t.itemId)||{}).name}`,
+      why:`${t.qty>0?'+':''}${t.qty} ${(ITEM(t.itemId)||{}).uom} valued at ${money(Math.abs(t.qty*(ITEM(t.itemId)||{cost:0}).cost))} on ${dstr(t.ts)}, entered by ${t.user}. Reason recorded: ${t.reason||'—'}.`}));
+  const night = DB.txns.filter(t=>!t.reversed&&t.ts>Date.now()-14*DAY&&(new Date(t.ts).getHours()<5||new Date(t.ts).getHours()>=22));
+  if(night.length) out.push({sev:'warn', title:`${night.length} transactions recorded outside working hours`,
+    why:`Movements posted between 22:00 and 05:00 in the last 14 days. Check against the shift roster before treating this as an exception.`});
+  DB.items.forEach(i=>{ const ret=DB.txns.filter(t=>!t.reversed&&t.itemId===i.id&&t.type==='Return'&&t.ts>Date.now()-60*DAY).length;
+    if(ret>=4) out.push({sev:'warn', title:`Repeated returns of ${i.name}`, why:`${ret} return transactions in 60 days. Possible quality or over-issue problem.`}); });
+  return out.slice(0,12);
+}
+function tomorrow(wh){
+  const rl = reorderList(wh);
+  const crit = rl.filter(x=>x.dz<=3);
+  const exp = expiringBatches(wh,30);
+  const ds = deadStock(wh);
+  const idleSoon = itemsIn(wh).filter(i=>{ const d=idleDays(i.id); return d>=DB.settings.deadDays-14&&d<DB.settings.deadDays&&onHand(i.id,wh)>0; });
+  const idleValue = idleSoon.reduce((s,i)=>s+valueOf(i,wh),0);
+  const anom = anomalies(wh).filter(a=>a.sev==='warn'&&a.title.includes('consumption'));
+  const lines=[];
+  if(crit.length) lines.push({t:`${crit.length} item${crit.length>1?'s':''} may reach critical stock within 3 days`, d:crit.slice(0,4).map(x=>`${x.it.name} — ${x.dz} day${x.dz===1?'':'s'} of cover left`).join(' · ')});
+  if(rl.length) lines.push({t:`${rl.length} purchase recommendation${rl.length>1?'s':''} are waiting to be raised`, d:`Estimated commitment ${money(rl.reduce((s,x)=>s+x.suggest*x.it.cost,0))}.`});
+  if(exp.length) lines.push({t:`${exp.length} batch${exp.length>1?'es':''} expire within 30 days`, d:`${money(exp.reduce((s,e)=>s+e.value,0))} of stock. Issue these first under FEFO.`});
+  if(idleValue>0) lines.push({t:`${money(idleValue)} of stock will be classed as dead if not used`, d:`${idleSoon.length} SKUs are approaching the ${DB.settings.deadDays}-day inactivity threshold.`});
+  if(anom.length) lines.push({t:anom[0].title, d:anom[0].why});
+  const excess = DB.warehouses.filter(w=>w.id!==wh).map(w=>{
+    const cand = itemsIn(w.id).find(i=>onHand(i.id,w.id)>i.max&&wh!=='*'&&available(i.id,wh)<=i.reorder);
+    return cand?{w,i:cand}:null; }).filter(Boolean)[0];
+  if(excess) lines.push({t:`Transfer instead of buying`, d:`${excess.w.name} holds surplus ${excess.i.name}. Moving stock avoids a purchase order.`});
+  return {lines, dead:ds.reduce((s,d)=>s+d.value,0)};
+}
+
+/* ---------------- suppliers ---------------- */
+function supplierScore(s){
+  const its = DB.items.filter(i=>i.supplier===s.id);
+  const recs = DB.txns.filter(t=>!t.reversed&&t.type==='Receive'&&its.some(i=>i.id===t.itemId));
+  const rets = DB.txns.filter(t=>!t.reversed&&t.type==='ReturnToSupplier'&&its.some(i=>i.id===t.itemId));
+  const onTime = recs.length? Math.max(60, 100 - (s.lead>10?12:4) - (rets.length*3)) : 85;
+  const quality = recs.length? Math.max(55, 100 - rets.length*6) : 88;
+  const priceIdx = Math.round(100 - (s.lead*0.8));
+  const score = Math.round(onTime*0.4+quality*0.35+priceIdx*0.25);
+  return {onTime, quality, priceIdx, score, receipts:recs.length, returns:rets.length, items:its.length,
+    band: score>=88?'Preferred':score>=75?'Approved':'Watch'};
+}
+
+/* ==========================================================================
+   Layer 2: demo history — 120 days of realistic movement for Unity FM
+   ========================================================================== */
+function seed(){
+  const start = T0 - 120*DAY;
+  const homeLoc = {};
+  DB.items.forEach(it=>{
+    const pool = locsOf(it.homeWh);
+    homeLoc[it.id] = pool[ri(0,pool.length-1)].id;
+  });
+  // opening receipts
+  DB.items.forEach(it=>{
+    const qty = ri(Math.round(it.max*0.6), it.max);
+    const b = it.batched? 'B'+dstr(start).replace(/-/g,'').slice(2)+'-'+it.sku.split('-')[1] : '';
+    const exp = it.expiryControlled? dstr(start + ri(180,520)*DAY) : '';
+    post({ts:start+ri(8,11)*3600000, type:'Receive', itemId:it.id, qty, locId:homeLoc[it.id], wh:it.homeWh,
+      batch:b, expiry:exp, ref:'GRN-OPEN-'+it.sku, party:it.supplier, partyType:'Supplier', user:'Saleem Hassan', note:'Opening balance'});
+  });
+  const users=['Saleem Hassan','Anil Kumar'];
+  for(let d=119; d>=0; d--){
+    const day = T0 - d*DAY;
+    const dow = new Date(day).getDay();
+    const busy = (dow===5)?0.35:1;           // Friday is quiet in Doha
+    const issues = Math.round(ri(6,16)*busy);
+    for(let k=0;k<issues;k++){
+      const it = pick(DB.items);
+      if(it.cat==='Tools'&&rnd()>0.25) continue;
+      const wh = it.homeWh;
+      const have = DB.txns.filter(t=>t.itemId===it.id&&t.ts<=day).reduce((s,t)=>s+t.qty,0);
+      const q = Math.min(Math.max(1,Math.round(it.min*ri(3,14)/100)), Math.max(0,have-1));
+      if(q<=0) continue;
+      const dept = pick(DB.departments), prj = pick(DB.projects);
+      post({ts:day+ri(7,17)*3600000+ri(0,59)*60000, type:'Issue', itemId:it.id, qty:-q, locId:homeLoc[it.id], wh,
+        batch:'', ref:'ISS-'+String(1000+DB.txns.length), party:prj.name, partyType:'Project',
+        note:dept.name, user:pick(users)});
+    }
+    // replenishment receipts
+    if(d%7===2||d%11===5){
+      for(let k=0;k<ri(2,5);k++){
+        const it = pick(DB.items);
+        const q = ri(Math.round(it.reorderQty*0.5), it.reorderQty);
+        const b = it.batched? 'B'+dstr(day).replace(/-/g,'').slice(2)+'-'+it.sku.split('-')[1] : '';
+        const exp = it.expiryControlled? dstr(day + ri(55,540)*DAY) : '';
+        post({ts:day+ri(8,12)*3600000, type:'Receive', itemId:it.id, qty:q, locId:homeLoc[it.id], wh:it.homeWh,
+          batch:b, expiry:exp, ref:'GRN-'+String(4000+DB.txns.length), party:it.supplier, partyType:'Supplier', user:pick(users), photo:rnd()>0.5});
+      }
+    }
+    // transfers
+    if(d%13===4){
+      const it = pick(DB.items); const from = it.homeWh;
+      const to = pick(DB.warehouses.filter(w=>w.id!==from)).id;
+      const have = DB.txns.filter(t=>t.itemId===it.id&&t.wh===from&&t.ts<=day).reduce((s,t)=>s+t.qty,0);
+      const q = Math.min(ri(3,18), Math.max(0,have-2));
+      if(q>0){
+        const dest = locsOf(to)[ri(0,locsOf(to).length-1)].id;
+        const ref='TRF-'+String(700+DB.txns.length);
+        post({ts:day+10*3600000, type:'Transfer', itemId:it.id, qty:-q, locId:homeLoc[it.id], wh:from, ref, note:`To ${to}`, user:pick(users)});
+        post({ts:day+10*3600000+60000, type:'Transfer', itemId:it.id, qty:q, locId:dest, wh:to, ref, note:`From ${from}`, user:pick(users)});
+      }
+    }
+    // returns from site
+    if(d%9===3){
+      const it = pick(DB.items);
+      post({ts:day+15*3600000, type:'Return', itemId:it.id, qty:ri(1,5), locId:homeLoc[it.id], wh:it.homeWh,
+        ref:'RTN-'+String(300+DB.txns.length), party:pick(DB.projects).name, partyType:'Project', note:'Unused material returned from site', user:pick(users)});
+    }
+    // adjustments
+    if(d%23===7){
+      const it = pick(DB.items);
+      const q = pick([-3,-2,-1,1,2]);
+      post({ts:day+13*3600000, type:'Adjust', itemId:it.id, qty:q, locId:homeLoc[it.id], wh:it.homeWh,
+        ref:'ADJ-'+String(200+DB.txns.length), reason: q<0?'Damaged during handling':'Count correction — found in bin', user:'Rashid Al-Kuwari', photo:true});
+    }
+  }
+  // make a few items deliberately interesting
+  const dead = DB.items.filter(i=>i.cat==='Tools'||i.cat==='Office Supplies').slice(0,4);
+  dead.forEach(i=>{ DB.txns = DB.txns.filter(t=>!(t.itemId===i.id && t.ts>T0-118*DAY)); });
+  BAL.dirty=true; sync();
+  // drive a handful below reorder so the intelligence modules have real work
+  ['ITM-1011','ITM-1018','ITM-1029'].forEach(id=>{
+    const it=ITEM(id); if(!it) return;
+    const oh=onHand(id,it.homeWh);
+    const target=Math.round(it.min*0.35);
+    if(oh>target) post({ts:T0-2*DAY+9*3600000, type:'Issue', itemId:id, qty:-(oh-target), locId:locsFor(id,it.homeWh)[0].loc,
+      wh:it.homeWh, ref:'ISS-BULK-'+id, party:pick(DB.projects).name, partyType:'Project', note:'Bulk site mobilisation', user:'Saleem Hassan'});
+  });
+  // one expired and one near-expiry batch
+  const ex1=ITEM('ITM-1003'), ex2=ITEM('ITM-1027');
+  if(ex1) post({ts:T0-40*DAY, type:'Receive', itemId:ex1.id, qty:18, locId:locsFor(ex1.id,ex1.homeWh)[0].loc, wh:ex1.homeWh,
+    batch:'B-LEGACY-03', expiry:dstr(T0+9*DAY), ref:'GRN-LEG-03', party:'S4', partyType:'Supplier', user:'Saleem Hassan'});
+  if(ex2) post({ts:T0-60*DAY, type:'Receive', itemId:ex2.id, qty:24, locId:locsFor(ex2.id,ex2.homeWh)[0].loc, wh:ex2.homeWh,
+    batch:'B-LEGACY-27', expiry:dstr(T0+22*DAY), ref:'GRN-LEG-27', party:'S1', partyType:'Supplier', user:'Anil Kumar'});
+
+  // today's movement — clamped so nothing is timestamped in the future
+  const NOW = Date.now(), tstamp = h => Math.min(T0+h*3600000+ri(0,59)*60000, NOW-ri(2,40)*60000);
+  for(let k=0;k<7;k++){
+    const it = pick(DB.items.filter(i=>onHand(i.id,i.homeWh)>20));
+    post({ts:tstamp(ri(7,11)), type:'Issue', itemId:it.id, qty:-ri(2,12), locId:locsFor(it.id,it.homeWh)[0].loc,
+      wh:it.homeWh, ref:'ISS-'+String(9000+k), party:pick(DB.projects).name, partyType:'Project', note:pick(DB.departments).name, user:pick(users)});
+  }
+  for(let k=0;k<3;k++){
+    const it = pick(DB.items);
+    post({ts:tstamp(ri(7,10)), type:'Receive', itemId:it.id, qty:ri(20,90), locId:locsFor(it.id,it.homeWh)[0]?.loc||locsOf(it.homeWh)[0].id,
+      wh:it.homeWh, batch: it.batched?'B'+dstr(T0).replace(/-/g,'').slice(2)+'-'+it.sku.split('-')[1]:'',
+      expiry: it.expiryControlled?dstr(T0+ri(200,500)*DAY):'', ref:'GRN-'+String(9500+k), party:it.supplier, partyType:'Supplier', user:'Saleem Hassan', photo:true});
+  }
+
+  /* ---- material requests across the workflow ---- */
+  const mk = (n,status,itemIds,wh,dept,prj,prio,daysAgo)=>{
+    const lines = itemIds.map(id=>{ const q=ri(4,30); return {itemId:id, qty:q, approvedQty:status==='Requested'?0:q, issuedQty:status==='Completed'?q:0}; });
+    DB.requests.push({id:'MR-'+String(2600+n), ts:T0-daysAgo*DAY+9*3600000, requester:pick(['Mary Fernandez','Ali Zahid','Sandeep R.']),
+      dept, project:prj, wh, priority:prio, status, need:dstr(T0+ri(1,10)*DAY), reason:pick(['Monthly site replenishment','New mobilisation','Emergency breakdown','Scheduled PPM']),
+      lines, history:[{s:'Requested',ts:T0-daysAgo*DAY,by:'Mary Fernandez'}].concat(
+        status==='Requested'?[]:[{s:'Approved',ts:T0-(daysAgo-1)*DAY,by:'Rashid Al-Kuwari'}]).concat(
+        ['Reserved','Issued','Completed'].includes(status)?[{s:'Reserved',ts:T0-(daysAgo-1)*DAY+3600000,by:'System'}]:[]).concat(
+        status==='Completed'?[{s:'Issued',ts:T0-(daysAgo-2)*DAY,by:'Saleem Hassan'},{s:'Completed',ts:T0-(daysAgo-2)*DAY,by:'System'}]:[])});
+  };
+  mk(1,'Requested',['ITM-1011','ITM-1009','ITM-1014'],'WH-01','Cleaning Operations','Lusail Towers FM Contract','High',1);
+  mk(2,'Requested',['ITM-1018','ITM-1022'],'WH-02','MEP Maintenance','Education City Facilities','Normal',0);
+  mk(3,'Approved',['ITM-1001','ITM-1007'],'WH-03','Cleaning Operations','Msheireb Retail Cleaning','Normal',2);
+  mk(4,'Reserved',['ITM-1013','ITM-1017'],'WH-01','HSE','Hamad Airport Support','Urgent',3);
+  mk(5,'Completed',['ITM-1005','ITM-1006'],'WH-03','Cleaning Operations','Lusail Towers FM Contract','Normal',6);
+  mk(6,'Requested',['ITM-1038'],'WH-01','HSE','Education City Facilities','Urgent',0);
+
+  /* ---- stock counts ---- */
+  for(let c=0;c<3;c++){
+    const wh = ['WH-01','WH-03','WH-02'][c];
+    const pool = itemsIn(wh).slice(0,10);
+    const lines = pool.map(i=>{ const sysq=onHand(i.id,wh); const v=rnd()>0.93?pick([-2,-1,1]):0;
+      return {itemId:i.id, loc:(locsFor(i.id,wh)[0]||{}).loc||'', system:sysq, physical:sysq+v, variance:v, note:v?pick(['Miscount on previous issue','Damaged unit removed','Found extra in adjacent bin']):''}; });
+    DB.counts.push({id:'SC-'+String(140+c), wh, ts:T0-(c*11+4)*DAY, by:pick(users), status:'Closed', lines,
+      accuracy:+(lines.filter(l=>!l.variance).length/lines.length*100).toFixed(1)});
+  }
+  /* ---- pending adjustments awaiting approval ---- */
+  DB.adjustments.push({id:'ADJ-901', ts:T0-1*DAY+11*3600000, wh:'WH-01', itemId:'ITM-1013', qty:-6, reason:'Water damage in Zone B after pipe leak',
+    by:'Saleem Hassan', value:6*ITEM('ITM-1013').cost, status:'Pending', approver:'Operations Manager', photo:true});
+  DB.adjustments.push({id:'ADJ-902', ts:T0-3*DAY+14*3600000, wh:'WH-04', itemId:'ITM-1031', qty:-1, reason:'Cylinder failed pressure test, scrapped',
+    by:'Anil Kumar', value:ITEM('ITM-1031').cost, status:'Pending', approver:'General Manager', photo:true});
+
+  /* ---- seed the audit trail from the ledger ---- */
+  // nothing may be timestamped ahead of the clock
+  DB.txns.forEach(t=>{ if(t.ts>Date.now()) t.ts = Date.now()-ri(1,55)*60000; });
+  DB.txns.sort((a,b)=>a.ts-b.ts);
+  DB.txns.slice(-60).forEach(t=>logAudit(t.type, `${t.itemId} @ ${t.locId||t.wh}`, '', t.qty, t.reason||t.note||t.ref));
+  DB.audit.forEach((a,i)=>{ a.ts = DB.txns[DB.txns.length-60+i] ? DB.txns[DB.txns.length-60+i].ts : a.ts; });
+  BAL.dirty=true; sync();
+}
+seed();
+
+/* ==========================================================================
+   Layer 3: language
+   ========================================================================== */
+const AR = {
+ 'Today':'اليوم','Opening stock':'رصيد افتتاحي','Received':'وارد','Issued':'منصرف','Returned':'مرتجع',
+ 'Transfers in':'تحويل وارد','Transfers out':'تحويل صادر','Adjustments':'تسويات','Closing stock':'رصيد ختامي',
+ 'Warehouse health':'صحة المستودع','Low stock':'مخزون منخفض','Out of stock':'نفد المخزون','Expiring':'قرب الانتهاء',
+ 'Pending approvals':'موافقات معلقة','Pending requests':'طلبات معلقة','Inventory value':'قيمة المخزون',
+ 'Daily update':'التحديث اليومي','One-minute control':'لوحة الدقيقة','Inventory':'المخزون','Scan':'مسح',
+ 'Receive stock':'استلام','Issue stock':'صرف','Transfer':'تحويل','Stock count':'الجرد','Requests':'الطلبات',
+ 'Adjustments & approvals':'التسويات والموافقات','Digital twin':'التوأم الرقمي','Heat map':'الخريطة الحرارية',
+ 'Intelligence':'الذكاء','Suppliers':'الموردون','Reports':'التقارير','Ask the warehouse':'اسأل المستودع',
+ 'Audit trail':'سجل التدقيق','Settings':'الإعدادات','Operations':'العمليات','Insight':'التحليل','Control':'الرقابة',
+ 'Item':'الصنف','Quantity':'الكمية','Location':'الموقع','Available':'المتاح','Reserved':'محجوز','On hand':'الرصيد',
+ 'Supplier':'المورد','Category':'الفئة','Status':'الحالة','Value':'القيمة','Search':'بحث','Confirm':'تأكيد',
+ 'Cancel':'إلغاء','Save':'حفظ','Approve':'اعتماد','Reject':'رفض','Healthy':'سليم','Critical':'حرج',
+ 'Overstock':'فائض','Dead stock':'راكد','Reorder point':'نقطة إعادة الطلب','Purchase recommendations':'توصيات الشراء',
+ 'Batch':'الدفعة','Expiry':'الانتهاء','Variance':'الفرق','Physical':'الفعلي','System':'النظام','Reason':'السبب',
+ 'Warehouse':'المستودع','Department':'القسم','Project':'المشروع','Priority':'الأولوية','Requester':'مقدم الطلب',
+ 'Stock':'المخزون','Movement':'الحركة','Risk':'المخاطر','Money':'المال','Action':'إجراء','Print':'طباعة','Export CSV':'تصدير'
+};
+const L = s => (DB.settings.lang==='ar' && AR[s]) ? AR[s] : s;
+const iname = it => DB.settings.lang==='ar' ? (it.nameAr||it.name) : it.name;
+const wname = w => DB.settings.lang==='ar' ? (w.nameAr||w.name) : w.name;
+const money = v => (DB.settings.lang==='ar'?'ر.ق ':'QAR ') + Math.round(v).toLocaleString('en-US');
+const money2 = v => (DB.settings.lang==='ar'?'ر.ق ':'QAR ') + v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const num = v => Number(v).toLocaleString('en-US');
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ==========================================================================
+   Layer 4: application shell
+   ========================================================================== */
+const NAV = [
+  {g:'Operations', items:[
+    {k:'dash', ic:'▤', t:'Daily update'},
+    {k:'scan', ic:'⌗', t:'Scan'},
+    {k:'recv', ic:'↧', t:'Receive stock'},
+    {k:'issue', ic:'↥', t:'Issue stock'},
+    {k:'xfer', ic:'⇄', t:'Transfer'},
+    {k:'count', ic:'☑', t:'Stock count'},
+    {k:'req', ic:'✉', t:'Requests', badge:()=>DB.requests.filter(r=>r.status==='Requested').length}
+  ]},
+  {g:'Insight', items:[
+    {k:'omc', ic:'◉', t:'One-minute control'},
+    {k:'inv', ic:'▦', t:'Inventory'},
+    {k:'twin', ic:'◫', t:'Digital twin'},
+    {k:'heat', ic:'▩', t:'Heat map'},
+    {k:'intel', ic:'✦', t:'Intelligence'},
+    {k:'ask', ic:'?', t:'Ask the warehouse'}
+  ]},
+  {g:'Control', items:[
+    {k:'adj', ic:'±', t:'Adjustments & approvals', badge:()=>DB.adjustments.filter(a=>a.status==='Pending').length},
+    {k:'sup', ic:'⌂', t:'Suppliers'},
+    {k:'rep', ic:'▭', t:'Reports'},
+    {k:'audit', ic:'☰', t:'Audit trail'},
+    {k:'set', ic:'⚙', t:'Settings'}
+  ]}
+];
+
+UI = {
+  view:'dash', wh:'WH-01', user:DB.users[0], tab:{}, filters:{},
+  can(k){ const p=DB.roles[this.user.role]; return p.includes('*')||p.includes(k); },
+  go(v,opts){ if(!this.can(v)){ toast('Your role does not have access to that screen.',true); return; }
+    this.view=v; if(opts) Object.assign(this.filters,opts); window.scrollTo(0,0); this.render(); document.getElementById('rail').classList.remove('on'); },
+  setWarehouse(v){ this.wh=v; this.render(); },
+  setUser(id){ this.user=DB.users.find(u=>u.id===id); if(!this.can(this.view)) this.view='dash'; this.render(); },
+  toggleLang(){ DB.settings.lang = DB.settings.lang==='en'?'ar':'en';
+    const ar = DB.settings.lang==='ar';
+    document.body.dir = ar?'rtl':'ltr'; document.documentElement.lang = ar?'ar':'en';
+    document.body.className = ar?'ar':'en';
+    document.getElementById('langBtn').textContent = ar?'English':'العربية';
+    this.render(); },
+  toggleRail(){ document.getElementById('rail').classList.toggle('on'); },
+  openDrawer(title, html){ document.getElementById('drawerTitle').textContent=title;
+    document.getElementById('drawerBody').innerHTML=html;
+    document.getElementById('drawer').classList.add('on'); document.getElementById('scrim').classList.add('on'); },
+  closeDrawer(){ document.getElementById('drawer').classList.remove('on'); document.getElementById('scrim').classList.remove('on'); },
+  render(){ renderTop(); renderNav(); document.getElementById('content').innerHTML = (VIEWS[this.view]||VIEWS.dash)(); if(AFTER[this.view]) AFTER[this.view](); }
+};
+const AFTER = {};
+
+function toast(msg, bad){
+  const d=document.createElement('div'); d.className='toast'+(bad?' bad':''); d.textContent=msg;
+  document.getElementById('toast').appendChild(d);
+  setTimeout(()=>{d.style.opacity='0';d.style.transition='opacity .4s';setTimeout(()=>d.remove(),400);},2600);
+}
+function renderTop(){
+  document.getElementById('brandName').textContent = DB.settings.product;
+  document.getElementById('brandSub').textContent = DB.settings.company.replace(' & Services','');
+  const ws=document.getElementById('whSel');
+  ws.innerHTML = `<option value="*">${L('Warehouse')}: ${DB.settings.lang==='ar'?'الكل':'All'}</option>` +
+    DB.warehouses.map(w=>`<option value="${w.id}" ${UI.wh===w.id?'selected':''}>${esc(wname(w))}</option>`).join('');
+  const us=document.getElementById('userSel');
+  us.innerHTML = DB.users.map(u=>`<option value="${u.id}" ${UI.user.id===u.id?'selected':''}>${esc(u.name)} · ${esc(u.role)}</option>`).join('');
+  document.getElementById('clock').textContent = new Date().toLocaleString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const dot=document.getElementById('netdot'); dot.classList.toggle('off', !navigator.onLine);
+  dot.title = navigator.onLine? 'Online — transactions post immediately' : `Offline — ${DB.queue.length} transactions queued`;
+}
+function renderNav(){
+  document.getElementById('nav').innerHTML = NAV.map(g=>{
+    const items = g.items.filter(i=>UI.can(i.k));
+    if(!items.length) return '';
+    return `<div class="navgroup">${esc(L(g.g))}</div>` + items.map(i=>{
+      const b = i.badge?i.badge():0;
+      return `<button class="navitem ${UI.view===i.k?'on':''}" onclick="UI.go('${i.k}')">
+        <span class="ic">${i.ic}</span><span>${esc(L(i.t))}</span>${b?`<span class="badge">${b}</span>`:''}</button>`;
+    }).join('');
+  }).join('');
+}
+
+/* small shared builders */
+function kpi(label, value, sub, cls){ return `<div class="kpi ${cls||''}"><div class="k">${esc(L(label))}</div><div class="v">${value}</div>${sub?`<div class="s">${esc(sub)}</div>`:''}</div>`; }
+function tag(status){ const cls={ok:'t-ok',warn:'t-warn',crit:'t-crit',over:'t-over',dead:'t-dead'}[status]||'t-neutral';
+  const lbl = DB.settings.lang==='ar'?STATUS_AR[status]:STATUS_LABEL[status];
+  return `<span class="tag ${cls}">${esc(lbl||status)}</span>`; }
+function pageHdr(title, sub, actions){
+  return `<div class="hdr between"><div><h1>${esc(L(title))}</h1>${sub?`<p>${esc(sub)}</p>`:''}</div><div class="row tight noprint">${actions||''}</div></div>`;
+}
+function whLabel(){ return UI.wh==='*' ? (DB.settings.lang==='ar'?'كل المستودعات':'All warehouses') : wname(DB.warehouses.find(w=>w.id===UI.wh)); }
+function dial(score){
+  const r=38,c=2*Math.PI*r, off=c*(1-score/100);
+  const col = score>=90?'var(--ok)':score>=80?'var(--teal)':score>=65?'var(--amber)':'var(--crit)';
+  return `<svg class="dialsvg" width="96" height="96" viewBox="0 0 96 96" aria-hidden="true">
+    <circle cx="48" cy="48" r="${r}" fill="none" stroke="var(--line-2)" stroke-width="9"></circle>
+    <circle cx="48" cy="48" r="${r}" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="round"
+      stroke-dasharray="${c}" stroke-dashoffset="${off}" transform="rotate(-90 48 48)"></circle></svg>`;
+}
+function bars(rows){ // tiny inline bar chart, no library
+  const max = Math.max(1,...rows.map(r=>r.v));
+  return `<div class="stack" style="gap:8px">`+rows.map(r=>`<div>
+    <div class="between xs" style="margin-bottom:3px"><span>${esc(r.l)}</span><span class="num muted">${esc(r.t||num(r.v))}</span></div>
+    <div class="bar"><i style="width:${(r.v/max*100).toFixed(1)}%;background:${r.c||'var(--teal)'}"></i></div></div>`).join('')+`</div>`;
+}
+function sparkline(vals,w,h){
+  w=w||260;h=h||54; const max=Math.max(1,...vals), min=Math.min(...vals);
+  const pts = vals.map((v,i)=>`${(i/(vals.length-1)*w).toFixed(1)},${(h-((v-min)/((max-min)||1))*(h-8)-4).toFixed(1)}`).join(' ');
+  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+    <polyline points="${pts}" fill="none" stroke="var(--teal)" stroke-width="2"/></svg>`;
+}
+function csv(name, rows){
+  const body = rows.map(r=>r.map(c=>`"${String(c==null?'':c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff'+body],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  logAudit('Export','Report: '+name,'','', 'CSV download');
+  toast('Exported '+name);
+}
+
+/* ==========================================================================
+   Layer 5: views
+   ========================================================================== */
+const VIEWS = {};
+
+/* ---------------- daily update / home ---------------- */
+VIEWS.dash = function(){
+  const wh=UI.wh, d=dailyLedger(wh), h=healthScore(wh);
+  const items=itemsIn(wh);
+  const low=items.filter(i=>statusOf(i,wh)==='warn').length;
+  const crit=items.filter(i=>statusOf(i,wh)==='crit').length;
+  const exp=expiringBatches(wh,30).length;
+  const preq=DB.requests.filter(r=>r.status==='Requested'&&(wh==='*'||r.wh===wh)).length;
+  const padj=DB.adjustments.filter(a=>a.status==='Pending'&&(wh==='*'||a.wh===wh)).length;
+  const dead=deadStock(wh);
+  const hist=[]; for(let k=13;k>=0;k--) hist.push(dayFlows(wh,T0-k*DAY).issues);
+  const term=(l,v,cls)=>`<div class="eqterm ${cls||''}"><div class="l">${esc(L(l))}</div><div class="n ${cls==='res'||cls==='open'?'':(v<0?'neg':'pos')}">${v<0?'−':''}${num(Math.abs(v))}</div></div>`;
+
+  return pageHdr('Daily update', `${whLabel()} · ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'})}`,
+    `<button class="btn ghost sm" onclick="window.print()">${esc(L('Print'))}</button>
+     <button class="btn sm" onclick="UI.go('scan')">${esc(L('Scan'))}</button>`) + `
+
+  <div id="eq">
+    <div class="eqhead">
+      <h2>${DB.settings.lang==='ar'?'حركة اليوم':'Today\'s stock equation'}</h2>
+      <span class="d">${d.count} ${DB.settings.lang==='ar'?'حركة مسجلة':'transactions posted today'} · ${esc(whLabel())}</span>
+    </div>
+    <div class="eqline">
+      ${term('Opening stock',d.opening,'open')}<span class="eqop">+</span>
+      ${term('Received',d.receipts)}<span class="eqop">+</span>
+      ${term('Returned',d.returnsIn)}<span class="eqop">+</span>
+      ${term('Transfers in',d.transferIn)}<span class="eqop">−</span>
+      ${term('Issued',d.issues)}<span class="eqop">−</span>
+      ${term('Transfers out',d.transferOut)}<span class="eqop">±</span>
+      ${term('Adjustments',d.adjustments)}<span class="eqop">=</span>
+      ${term('Closing stock',d.closing,'res')}
+    </div>
+    <div class="xs" style="color:#8B9793;margin-top:10px">${DB.settings.lang==='ar'?'الأرصدة محسوبة من دفتر الحركات ولا يمكن تعديلها يدويًا.':'Balances are computed from the transaction ledger. No user can type over a calculated figure.'}</div>
+  </div>
+
+  <div class="grid g4" style="margin-top:14px">
+    ${kpi('Low stock', low, `${crit} critical`, low?'warn':'ok')}
+    ${kpi('Out of stock', items.filter(i=>onHand(i.id,wh)<=0).length, 'zero balance', 'crit')}
+    ${kpi('Expiring', exp, 'within 30 days', exp?'warn':'ok')}
+    ${kpi('Pending approvals', preq+padj, `${preq} requests · ${padj} adjustments`, (preq+padj)?'teal':'ok')}
+  </div>
+
+  <div class="grid g2" style="margin-top:14px">
+    <div class="panel pad">
+      <div class="between" style="margin-bottom:12px"><h3>${esc(L('Warehouse health'))}</h3><span class="tag t-teal">${esc(h.band)}</span></div>
+      <div class="dial">${dial(h.score)}
+        <div><div class="healthnum">${h.score}<span class="muted" style="font-size:16px;font-weight:500">/100</span></div>
+        <div class="sm muted" style="max-width:34ch">${esc(h.parts.slice().sort((a,b)=>a.v-b.v)[0].why)}</div></div></div>
+      <hr class="sep">
+      ${bars(h.parts.map(p=>({l:p.k, v:Math.round(p.v*100), t:Math.round(p.v*100)+'%', c:p.v>0.85?'var(--ok)':p.v>0.6?'var(--amber)':'var(--crit)'})))}
+      <div class="why" style="margin-top:12px">${esc(h.parts.filter(p=>p.v<0.85).map(p=>p.why).join(' ')||'Every health component is inside its target range.')}</div>
+    </div>
+    <div class="panel pad">
+      <h3>${DB.settings.lang==='ar'?'الصرف خلال ١٤ يومًا':'Issues over 14 days'}</h3>
+      <div class="sm muted">${DB.settings.lang==='ar'?'إجمالي الوحدات المنصرفة يوميًا':'Units issued per day'}</div>
+      ${sparkline(hist)}
+      <hr class="sep">
+      <h4 style="margin-bottom:8px">${DB.settings.lang==='ar'?'أكثر الأصناف استهلاكًا (٣٠ يومًا)':'Most consumed, last 30 days'}</h4>
+      ${bars(DB.items.map(i=>({i,v:issuesIn(i.id,30,wh)})).sort((a,b)=>b.v-a.v).slice(0,6)
+        .map(x=>({l:iname(x.i), v:x.v, t:num(x.v)+' '+x.i.uom})))}
+    </div>
+  </div>
+
+  <div class="grid g3" style="margin-top:14px">
+    ${kpi('Inventory value', money(inventoryValue(wh)), `${items.length} active SKUs`, 'teal')}
+    ${kpi('Dead stock', money(dead.reduce((s,x)=>s+x.value,0)), `${dead.length} SKUs idle ${DB.settings.deadDays}+ days`, 'dead')}
+    ${kpi('Storage utilisation', storageUtil(wh).toFixed(0)+'%', `${(UI.wh==='*'?DB.locations:locsOf(wh)).length} bins mapped`, 'over')}
+  </div>
+
+  <div class="panel pad" style="margin-top:14px">
+    <div class="between" style="margin-bottom:10px"><h3>${DB.settings.lang==='ar'?'حركة اليوم':'Today\'s movement'}</h3>
+      <button class="btn ghost sm noprint" onclick="UI.go('audit')">${esc(L('Audit trail'))}</button></div>
+    ${txnTable(DB.txns.filter(t=>t.ts>=T0&&(wh==='*'||t.wh===wh)).sort((a,b)=>b.ts-a.ts))}
+  </div>`;
+};
+
+function txnTable(list, limit){
+  const rows = list.slice(0,limit||40);
+  if(!rows.length) return `<div class="empty"><h4>${DB.settings.lang==='ar'?'لا توجد حركات بعد':'No movement recorded yet'}</h4><p>${DB.settings.lang==='ar'?'ابدأ باستلام أو صرف صنف.':'Receive or issue an item and it will appear here immediately.'}</p><button class="btn" onclick="UI.go('recv')">${esc(L('Receive stock'))}</button></div>`;
+  return `<div class="t-scroll"><table><thead><tr>
+    <th>${esc(DB.settings.lang==='ar'?'الوقت':'Time')}</th><th>${esc(DB.settings.lang==='ar'?'النوع':'Type')}</th><th>${esc(L('Item'))}</th>
+    <th class="r">${esc(L('Quantity'))}</th><th>${esc(L('Location'))}</th><th>${esc(DB.settings.lang==='ar'?'المرجع':'Reference')}</th>
+    <th>${esc(DB.settings.lang==='ar'?'المستخدم':'User')}</th></tr></thead><tbody>
+    ${rows.map(t=>{ const it=ITEM(t.itemId)||{name:t.itemId,uom:''};
+      return `<tr class="clk" onclick="showItem('${t.itemId}')">
+      <td class="mono">${new Date(t.ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</td>
+      <td><span class="tag ${t.qty>0?'t-ok':'t-neutral'}">${esc(t.type)}</span></td>
+      <td>${esc(iname(it))}<div class="xs mono dim">${esc(it.sku||'')}</div></td>
+      <td class="r qty" style="color:${t.qty<0?'var(--crit)':'var(--ok)'}">${t.qty>0?'+':''}${num(t.qty)}</td>
+      <td class="mono xs">${esc(t.locId||t.wh)}</td>
+      <td class="mono xs">${esc(t.ref)}</td>
+      <td class="xs">${esc(t.user)}${t.photo?' 📷':''}</td></tr>`; }).join('')}
+  </tbody></table></div>`;
+}
+
+/* ---------------- one-minute control ---------------- */
+VIEWS.omc = function(){
+  const wh=UI.wh, d=dailyLedger(wh), h=healthScore(wh);
+  const items=itemsIn(wh);
+  const crit=items.filter(i=>statusOf(i,wh)==='crit');
+  const rl=reorderList(wh);
+  const month=DB.txns.filter(t=>!t.reversed&&t.ts>Date.now()-30*DAY&&(wh==='*'||t.wh===wh)).length;
+  const dead=deadStock(wh);
+  const tm=tomorrow(wh);
+  return pageHdr('One-minute control', `${whLabel()} · ${DB.settings.lang==='ar'?'كل ما تحتاج الإدارة معرفته':'Everything management needs, on one screen'}`,
+    `<button class="btn ghost sm" onclick="window.print()">${esc(L('Print'))}</button>`) + `
+  <div id="omc">
+    <div class="omcell"><div class="cap">${esc(L('Stock').toUpperCase())}</div><div class="big">${num(d.closing)}</div>
+      <div class="sub">${DB.settings.lang==='ar'?'وحدة في المخزون':'units on hand'} · ${items.length} SKUs</div></div>
+    <div class="omcell"><div class="cap">${esc(L('Movement').toUpperCase())}</div><div class="big">${num(month)}</div>
+      <div class="sub">${DB.settings.lang==='ar'?'حركة خلال ٣٠ يومًا':'transactions in 30 days'}</div></div>
+    <div class="omcell risk"><div class="cap">${esc(L('Risk').toUpperCase())}</div><div class="big">${crit.length}</div>
+      <div class="sub">${DB.settings.lang==='ar'?'أصناف حرجة':'critical items'} · ${expiringBatches(wh,30).length} ${DB.settings.lang==='ar'?'دفعات قرب الانتهاء':'batches near expiry'}</div></div>
+    <div class="omcell"><div class="cap">${esc(L('Money').toUpperCase())}</div><div class="big">${money(inventoryValue(wh)).replace('QAR ','')}</div>
+      <div class="sub">QAR ${DB.settings.lang==='ar'?'قيمة المخزون':'inventory value'} · ${money(dead.reduce((s,x)=>s+x.value,0))} ${DB.settings.lang==='ar'?'راكد':'idle'}</div></div>
+    <div class="omcell action"><div class="cap">${esc(L('Action').toUpperCase())}</div><div class="big">${rl.length}</div>
+      <div class="sub">${DB.settings.lang==='ar'?'توصيات شراء':'purchase recommendations'}</div></div>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="panel pad">
+      <h3 style="margin-bottom:8px">${DB.settings.lang==='ar'?'ما الذي سيحدث غدًا':'Warehouse tomorrow'}</h3>
+      <p class="sm muted" style="margin:0 0 12px">${DB.settings.lang==='ar'?'توقعات محسوبة من الاستهلاك التاريخي. ليست ضمانًا.':'Projected from historical consumption. These are estimates, not guarantees.'}</p>
+      ${tm.lines.length? tm.lines.map(l=>`<div class="note" style="margin-bottom:8px"><strong>${esc(l.t)}</strong><div class="why">${esc(l.d)}</div></div>`).join('')
+        : `<div class="note teal">Nothing is forecast to breach a threshold in the next 7 days.</div>`}
+    </div>
+    <div class="panel pad">
+      <div class="between" style="margin-bottom:10px"><h3>${esc(L('Warehouse health'))}</h3><span class="tag t-teal">${h.score}/100 · ${esc(h.band)}</span></div>
+      ${bars(h.parts.map(p=>({l:p.k, v:Math.round(p.v*100), t:Math.round(p.v*100)+'%', c:p.v>0.85?'var(--ok)':p.v>0.6?'var(--amber)':'var(--crit)'})))}
+      <hr class="sep">
+      <h4 style="margin-bottom:8px">${DB.settings.lang==='ar'?'الأصناف الحرجة':'Critical items'}</h4>
+      ${crit.length? `<div class="t-scroll"><table><tbody>${crit.slice(0,6).map(i=>`<tr class="clk" onclick="showItem('${i.id}')">
+        <td>${esc(iname(i))}<div class="xs mono dim">${esc(i.sku)}</div></td>
+        <td class="r qty">${num(available(i.id,wh))}</td><td class="r">${tag(statusOf(i,wh))}</td></tr>`).join('')}</tbody></table></div>`
+        : `<p class="sm muted">No item is below its critical threshold.</p>`}
+    </div>
+  </div>`;
+};
+
+/* ---------------- inventory ---------------- */
+VIEWS.inv = function(){
+  const wh=UI.wh;
+  const q=(UI.filters.q||'').toLowerCase(), cat=UI.filters.cat||'', st=UI.filters.st||'';
+  let list = itemsIn(wh);
+  if(q) list = list.filter(i=>(i.name+i.nameAr+i.sku+i.barcode+i.partNo+i.cat+i.brand).toLowerCase().includes(q));
+  if(cat) list = list.filter(i=>i.cat===cat);
+  if(st) list = list.filter(i=>statusOf(i,wh)===st);
+  list = list.sort((a,b)=>iname(a).localeCompare(iname(b)));
+  return pageHdr('Inventory', `${list.length} ${DB.settings.lang==='ar'?'صنف':'items'} · ${esc(whLabel())}`,
+   `<button class="btn ghost sm" onclick="exportInventory()">${esc(L('Export CSV'))}</button>
+    <button class="btn sm" onclick="UI.go('scan')">${esc(L('Scan'))}</button>`) + `
+  <div class="panel pad" style="margin-bottom:12px">
+    <div class="row">
+      <div class="field" style="flex:2"><label class="f">${esc(L('Search'))}</label>
+        <input class="f" id="invQ" value="${esc(UI.filters.q||'')}" placeholder="${DB.settings.lang==='ar'?'اسم، رمز، باركود، رقم قطعة…':'Name, SKU, barcode, part number, Arabic name…'}"
+          oninput="UI.filters.q=this.value;clearTimeout(window._t);window._t=setTimeout(()=>{UI.render();document.getElementById('invQ').focus()},220)"></div>
+      <div class="field"><label class="f">${esc(L('Category'))}</label>
+        <select class="f" onchange="UI.filters.cat=this.value;UI.render()"><option value="">${DB.settings.lang==='ar'?'الكل':'All'}</option>
+        ${DB.categories.map(c=>`<option ${cat===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+      <div class="field"><label class="f">${esc(L('Status'))}</label>
+        <select class="f" onchange="UI.filters.st=this.value;UI.render()"><option value="">${DB.settings.lang==='ar'?'الكل':'All'}</option>
+        ${['ok','warn','crit','over','dead'].map(s=>`<option value="${s}" ${st===s?'selected':''}>${esc(STATUS_LABEL[s])}</option>`).join('')}</select></div>
+    </div>
+  </div>
+  ${list.length? `<div class="panel"><div class="t-scroll"><table><thead><tr>
+    <th>${esc(L('Item'))}</th><th>SKU</th><th>${esc(L('Category'))}</th><th class="r">${esc(L('On hand'))}</th>
+    <th class="r">${esc(L('Reserved'))}</th><th class="r">${esc(L('Available'))}</th><th class="r">${esc(L('Reorder point'))}</th>
+    <th>${esc(L('Location'))}</th><th class="r">${esc(L('Value'))}</th><th>${esc(L('Status'))}</th></tr></thead><tbody>
+    ${list.map(i=>{ const oh=onHand(i.id,wh), rv=reserved(i.id,wh), r=reorderPoint(i,wh), lc=locsFor(i.id,wh)[0];
+      return `<tr class="clk" onclick="showItem('${i.id}')">
+      <td>${esc(iname(i))}<div class="xs dim">${esc(i.brand)} · ${esc(i.uom)}</div></td>
+      <td class="mono xs">${esc(i.sku)}</td><td class="xs">${esc(DB.settings.lang==='ar'?DB.categoriesAr[i.cat]:i.cat)}</td>
+      <td class="r qty">${num(oh)}</td><td class="r qty ${rv?'':'dim'}">${num(rv)}</td>
+      <td class="r qty">${num(oh-rv)}</td><td class="r num muted">${num(r.rop)}</td>
+      <td class="mono xs">${lc?esc(lc.loc.replace(UI.wh+'/','')):'—'}</td>
+      <td class="r num">${money(Math.max(0,oh*i.cost)).replace('QAR ','')}</td>
+      <td>${tag(statusOf(i,wh))}</td></tr>`; }).join('')}
+  </tbody></table></div></div>`
+  : `<div class="panel empty"><h4>${DB.settings.lang==='ar'?'لا نتائج':'Nothing matches that search'}</h4><p>${DB.settings.lang==='ar'?'جرّب رمزًا أو اسمًا مختلفًا.':'Try a different SKU, barcode or item name.'}</p><button class="btn ghost" onclick="UI.filters={};UI.render()">Clear filters</button></div>`}`;
+};
+function exportInventory(){
+  const wh=UI.wh;
+  csv(`inventory-${wh}-${dstr(Date.now())}.csv`,
+    [['SKU','Item','Arabic name','Category','UoM','On hand','Reserved','Available','Min','Reorder point','Unit cost','Value','Status','Primary location']]
+    .concat(itemsIn(wh).map(i=>{const r=reorderPoint(i,wh),oh=onHand(i.id,wh),lc=locsFor(i.id,wh)[0];
+      return [i.sku,i.name,i.nameAr,i.cat,i.uom,oh,reserved(i.id,wh),oh-reserved(i.id,wh),i.min,r.rop,i.cost,(oh*i.cost).toFixed(2),STATUS_LABEL[statusOf(i,wh)],lc?lc.loc:''];})));
+}
+
+/* ---------------- item detail drawer ---------------- */
+function showItem(id){
+  const i=ITEM(id); if(!i) return;
+  const wh=UI.wh, oh=onHand(id,wh), rv=reserved(id,wh), r=reorderPoint(i,wh), risk=riskScore(i,wh);
+  const ls=locsFor(id,wh), bs=batchesFor(id);
+  const hist=DB.txns.filter(t=>!t.reversed&&t.itemId===id&&(wh==='*'||t.wh===wh)).sort((a,b)=>b.ts-a.ts).slice(0,12);
+  const dz=daysToZero(i,wh);
+  const sup=DB.suppliers.find(s=>s.id===i.supplier);
+  UI.openDrawer(iname(i), `
+    <div class="row tight" style="margin-bottom:12px">
+      <span class="tag t-neutral mono">${esc(i.sku)}</span><span class="tag t-neutral mono">${esc(i.barcode)}</span>
+      ${tag(statusOf(i,wh))}<span class="tag ${risk.band==='HIGH'?'t-crit':risk.band==='MEDIUM'?'t-warn':'t-ok'}">Risk ${risk.score}/100</span>
+    </div>
+    <div class="grid g3" style="margin-bottom:12px">
+      ${kpi('On hand',num(oh),i.uom,'teal')}${kpi('Reserved',num(rv),'committed to requests',rv?'warn':'')}${kpi('Available',num(oh-rv),'free to issue','ok')}
+    </div>
+    <div class="panel pad" style="margin-bottom:12px">
+      <h4 style="margin-bottom:8px">${DB.settings.lang==='ar'?'إعادة الطلب':'Replenishment'}</h4>
+      <table><tbody>
+        <tr><td>${DB.settings.lang==='ar'?'متوسط الاستهلاك اليومي':'Average daily usage'}</td><td class="r qty">${r.avgDaily} ${esc(i.uom)}</td></tr>
+        <tr><td>${DB.settings.lang==='ar'?'مدة التوريد':'Supplier lead time'}</td><td class="r qty">${r.lead} days</td></tr>
+        <tr><td>${DB.settings.lang==='ar'?'مخزون الأمان':'Safety stock'}</td><td class="r qty">${num(r.safety)}</td></tr>
+        <tr><td><strong>${esc(L('Reorder point'))}</strong></td><td class="r qty">${num(r.rop)}</td></tr>
+        <tr><td>${DB.settings.lang==='ar'?'أيام حتى نفاد المخزون':'Days of cover remaining'}</td><td class="r qty">${dz===Infinity?'—':dz}</td></tr>
+      </tbody></table>
+      <div class="why" style="margin-top:8px">Reorder point = average daily usage × lead time + safety stock = ${r.avgDaily} × ${r.lead} + ${r.safety} = ${r.rop}.</div>
+      ${(oh-rv)<=r.rop?`<button class="btn warn sm" style="margin-top:10px" onclick="raisePR('${id}')">Raise purchase request for ${Math.max(i.reorderQty,Math.ceil(r.rop*1.6-(oh-rv)))} ${esc(i.uom)}</button>`:''}
+    </div>
+    ${risk.factors.length?`<div class="note ${risk.band==='HIGH'?'crit':''}" style="margin-bottom:12px"><strong>Why this risk score</strong>
+      <ul class="sm" style="margin:6px 0 0;padding-inline-start:18px">${risk.factors.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`:''}
+    <div class="panel pad" style="margin-bottom:12px">
+      <h4 style="margin-bottom:8px">${esc(L('Location'))}</h4>
+      ${ls.length? `<table><tbody>${ls.map(x=>`<tr><td class="mono xs">${esc(x.loc)}</td><td class="r qty">${num(x.qty)}</td></tr>`).join('')}</tbody></table>`
+        : `<p class="sm muted">No stock in this warehouse.</p>`}
+    </div>
+    ${bs.length?`<div class="panel pad" style="margin-bottom:12px">
+      <h4 style="margin-bottom:8px">${esc(L('Batch'))} · FEFO</h4>
+      <table><thead><tr><th>${esc(L('Batch'))}</th><th>${esc(L('Expiry'))}</th><th class="r">${esc(L('Quantity'))}</th></tr></thead><tbody>
+      ${bs.map((b,ix)=>{ const dd=b.expiry?Math.floor((new Date(b.expiry).getTime()-Date.now())/DAY):null;
+        return `<tr><td class="mono xs">${esc(b.batch)}${ix===0&&b.expiry?' <span class="tag t-teal">issue first</span>':''}</td>
+        <td class="xs ${dd!==null&&dd<30?'':'muted'}" style="${dd!==null&&dd<0?'color:var(--crit);font-weight:600':dd!==null&&dd<30?'color:var(--warn);font-weight:600':''}">${b.expiry?esc(b.expiry)+(dd<0?` (expired)`:` (${dd}d)`):'—'}</td>
+        <td class="r qty">${num(b.qty)}</td></tr>`;}).join('')}</tbody></table></div>`:''}
+    <div class="panel pad" style="margin-bottom:12px">
+      <h4 style="margin-bottom:8px">${DB.settings.lang==='ar'?'بيانات الصنف':'Item master'}</h4>
+      <table><tbody>
+        <tr><td class="muted">Arabic name</td><td class="r">${esc(i.nameAr)}</td></tr>
+        <tr><td class="muted">${esc(L('Category'))}</td><td class="r">${esc(i.cat)}</td></tr>
+        <tr><td class="muted">Brand / model</td><td class="r">${esc(i.brand)} ${esc(i.model)}</td></tr>
+        <tr><td class="muted">Part number</td><td class="r mono xs">${esc(i.partNo)}</td></tr>
+        <tr><td class="muted">Min / max</td><td class="r qty">${num(i.min)} / ${num(i.max)}</td></tr>
+        <tr><td class="muted">Unit cost</td><td class="r">${money2(i.cost)}</td></tr>
+        <tr><td class="muted">${esc(L('Supplier'))}</td><td class="r">${esc(sup?sup.name:'—')}</td></tr>
+        <tr><td class="muted">Stock value</td><td class="r">${money2(Math.max(0,oh*i.cost))}</td></tr>
+      </tbody></table>
+    </div>
+    <div class="panel pad">
+      <h4 style="margin-bottom:8px">${DB.settings.lang==='ar'?'آخر الحركات':'Recent movement'}</h4>
+      ${txnTable(hist,12)}
+    </div>`);
+}
+
+/* ==========================================================================
+   Layer 6: transactional screens — scan, receive, issue, transfer, count
+   ========================================================================== */
+let SCAN = {item:null, stream:null};
+
+VIEWS.scan = function(){
+  const it = SCAN.item;
+  return pageHdr('Scan', DB.settings.lang==='ar'?'امسح الباركود أو أدخل الرمز يدويًا':'Scan a barcode, or type the SKU, barcode or part number. Three steps to a posted transaction.',
+    it?`<button class="btn ghost sm" onclick="SCAN.item=null;UI.render()">Scan another</button>`:'') + `
+  ${!it? `
+  <div class="panel pad" style="max-width:560px">
+    <div id="scanbox">
+      <video id="scanvid" playsinline muted></video>
+      <div id="scanmsg" class="sm" style="color:#8B9793;margin-bottom:10px">Camera scanning uses your device's built-in barcode reader when available.</div>
+      <button class="btn warn" onclick="startCamera()">Use camera</button>
+    </div>
+    <hr class="sep">
+    <label class="f">${esc(L('Search'))}</label>
+    <div class="row tight">
+      <input class="f" id="scanIn" style="flex:1" placeholder="e.g. PPE-111, 6284000377, Nitrile" onkeydown="if(event.key==='Enter')doScan()">
+      <button class="btn" onclick="doScan()">${esc(L('Confirm'))}</button>
+    </div>
+    <div class="chips">${DB.items.slice(0,5).map(i=>`<button class="chip mono" onclick="document.getElementById('scanIn').value='${i.sku}';doScan()">${esc(i.sku)}</button>`).join('')}</div>
+  </div>` : scanResult(it)}`;
+};
+AFTER.scan = ()=>{ const el=document.getElementById('scanIn'); if(el) el.focus(); };
+
+function doScan(){
+  const v=document.getElementById('scanIn').value;
+  const it=findItem(v);
+  if(!it){ toast('No item matches "'+v+'". Check the code or search by name.',true); return; }
+  SCAN.item=it; stopCamera(); UI.render();
+}
+function scanResult(i){
+  const wh=UI.wh==='*'?i.homeWh:UI.wh;
+  const oh=onHand(i.id,wh), rv=reserved(i.id,wh), ls=locsFor(i.id,wh), last=DB.txns.filter(t=>!t.reversed&&t.itemId===i.id).sort((a,b)=>b.ts-a.ts)[0];
+  const fb=fefoBatch(i.id);
+  return `<div class="panel pad" style="max-width:720px">
+    <div class="between" style="margin-bottom:12px"><div><h2>${esc(iname(i))}</h2>
+      <div class="sm mono dim">${esc(i.sku)} · ${esc(i.barcode)}</div></div>${tag(statusOf(i,wh))}</div>
+    <div class="grid g3" style="margin-bottom:12px">
+      ${kpi('On hand',num(oh),i.uom,'teal')}${kpi('Reserved',num(rv),'',rv?'warn':'')}${kpi('Available',num(oh-rv),'free to issue','ok')}
+    </div>
+    <table style="margin-bottom:12px"><tbody>
+      <tr><td class="muted">${esc(L('Location'))}</td><td class="r mono xs">${ls.length?esc(ls[0].loc):'—'}</td></tr>
+      <tr><td class="muted">Minimum / reorder</td><td class="r qty">${num(i.min)} / ${num(reorderPoint(i,wh).rop)}</td></tr>
+      ${fb?`<tr><td class="muted">${esc(L('Batch'))} (FEFO)</td><td class="r mono xs">${esc(fb.batch)} · ${esc(fb.expiry)}</td></tr>`:''}
+      <tr><td class="muted">Last transaction</td><td class="r xs">${last?esc(last.type+' '+last.qty+' · '+tstr(last.ts)):'—'}</td></tr>
+    </tbody></table>
+    <h4 style="margin-bottom:8px">${DB.settings.lang==='ar'?'اختر الإجراء':'Choose an action'}</h4>
+    <div class="row tight">
+      <button class="btn big" onclick="UI.go('recv',{item:'${i.id}'})">${esc(L('Receive stock'))}</button>
+      <button class="btn big" onclick="UI.go('issue',{item:'${i.id}'})">${esc(L('Issue stock'))}</button>
+      <button class="btn ghost big" onclick="UI.go('xfer',{item:'${i.id}'})">${esc(L('Transfer'))}</button>
+      <button class="btn ghost big" onclick="UI.go('count',{item:'${i.id}'})">${esc(L('Stock count'))}</button>
+      <button class="btn ghost big" onclick="showItem('${i.id}')">History</button>
+    </div>
+  </div>`;
+}
+async function startCamera(){
+  const v=document.getElementById('scanvid'), m=document.getElementById('scanmsg');
+  if(!('BarcodeDetector' in window)){ m.textContent='This browser has no built-in barcode reader. Use the field below, or a USB/Bluetooth scanner — it types straight into the box.'; return; }
+  try{
+    SCAN.stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    v.srcObject=SCAN.stream; v.style.display='block'; await v.play();
+    m.textContent='Point the camera at a barcode.';
+    const det = new BarcodeDetector();
+    const tick = async ()=>{ if(!SCAN.stream) return;
+      try{ const codes = await det.detect(v);
+        if(codes.length){ document.getElementById('scanIn').value = codes[0].rawValue; doScan(); return; }
+      }catch(e){}
+      requestAnimationFrame(tick); };
+    tick();
+  }catch(e){ m.textContent='Camera permission was refused. Type the code below instead.'; }
+}
+function stopCamera(){ if(SCAN.stream){ SCAN.stream.getTracks().forEach(t=>t.stop()); SCAN.stream=null; } }
+
+/* ---------------- receive ---------------- */
+VIEWS.recv = function(){
+  const pre=UI.filters.item?ITEM(UI.filters.item):null;
+  const wh = UI.wh==='*'?'WH-01':UI.wh;
+  return pageHdr('Receive stock', DB.settings.lang==='ar'?'استلام بضاعة مقابل أمر شراء أو مذكرة تسليم':'Book goods in against a purchase order or delivery note. Partial receipts are allowed.') + `
+  <div class="panel pad" style="max-width:820px">
+    <div class="row">
+      <div class="field"><label class="f">${esc(L('Item'))}</label><select class="f" id="rItem" onchange="recvLoc()">
+        ${DB.items.map(i=>`<option value="${i.id}" ${pre&&pre.id===i.id?'selected':''}>${esc(iname(i))} — ${esc(i.sku)}</option>`).join('')}</select></div>
+      <div class="field"><label class="f">${esc(L('Warehouse'))}</label><select class="f" id="rWh" onchange="recvLoc()">
+        ${DB.warehouses.map(w=>`<option value="${w.id}" ${wh===w.id?'selected':''}>${esc(wname(w))}</option>`).join('')}</select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label class="f">${esc(L('Supplier'))}</label><select class="f" id="rSup">
+        ${DB.suppliers.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></div>
+      <div class="field"><label class="f">PO number</label><input class="f" id="rPO" value="PO-${ri(24000,24999)}"></div>
+      <div class="field"><label class="f">Delivery note</label><input class="f" id="rDN" value="DN-${ri(7000,7999)}"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label class="f">${esc(L('Quantity'))}</label><input class="f num" id="rQty" type="number" min="1" value="50"></div>
+      <div class="field"><label class="f">${esc(L('Batch'))}</label><input class="f" id="rBatch" placeholder="optional"></div>
+      <div class="field"><label class="f">${esc(L('Expiry'))}</label><input class="f" id="rExp" type="date"></div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:2"><label class="f">${esc(L('Location'))}</label><select class="f" id="rLoc"></select>
+        <div class="why" id="rWhy" style="margin-top:6px"></div></div>
+      <div class="field"><label class="f">Condition</label><select class="f" id="rCond"><option>Good</option><option>Damaged — quarantine</option></select></div>
+    </div>
+    <div class="row"><div class="field" style="flex:1"><label class="f">Notes</label><input class="f" id="rNote" placeholder="Inspection remarks, packing condition…"></div>
+      <div class="field" style="max-width:190px"><label class="f">Photo proof</label>
+        <label class="sm" style="display:flex;gap:6px;align-items:center;padding-top:8px"><input type="checkbox" id="rPhoto" checked> Attach delivery photo</label></div></div>
+    <button class="btn big" onclick="doReceive()">${DB.settings.lang==='ar'?'ترحيل الاستلام':'Post receipt'}</button>
+  </div>`;
+};
+AFTER.recv = ()=>recvLoc();
+function recvLoc(){
+  const it=ITEM(document.getElementById('rItem').value), wh=document.getElementById('rWh').value;
+  const sel=document.getElementById('rLoc'); if(!sel) return;
+  const rec = suggestLocation(it,wh);
+  const pool = locsOf(wh);
+  sel.innerHTML = pool.map(l=>`<option value="${l.id}" ${rec.loc===l.id?'selected':''}>${esc(l.id)} · cap ${l.capacity}</option>`).join('');
+  document.getElementById('rWhy').textContent = rec.why;
+  const exp=document.getElementById('rExp'); exp.disabled=!it.expiryControlled;
+  const b=document.getElementById('rBatch'); b.disabled=!it.batched;
+  if(it.batched&&!b.value) b.value='B'+dstr(Date.now()).replace(/-/g,'').slice(2)+'-'+it.sku.split('-')[1];
+}
+function suggestLocation(it,wh){
+  sync();
+  const existing = locsFor(it.id,wh)[0];
+  if(existing){ const l=LOC(existing.loc); const used=existing.qty;
+    if(used < l.capacity*0.85) return {loc:existing.loc, why:`Recommended ${existing.loc} — this item is already stored here and the bin is ${Math.round(used/l.capacity*100)}% full.`}; }
+  const sameCat = DB.items.filter(x=>x.cat===it.cat&&x.id!==it.id);
+  for(const s of sameCat){ const ls=locsFor(s.id,wh)[0]; if(!ls) continue;
+    const l=LOC(ls.loc); let used=0; Object.keys(BAL.byItemLoc).forEach(k=>{ if(k.endsWith('|'+l.id)) used+=Math.max(0,BAL.byItemLoc[k]); });
+    if(used<l.capacity*0.7) return {loc:l.id, why:`Recommended ${l.id} — other ${it.cat} is stored here and the location has ${Math.round(100-used/l.capacity*100)}% capacity available.`}; }
+  const free = locsOf(wh).map(l=>{ let used=0; Object.keys(BAL.byItemLoc).forEach(k=>{ if(k.endsWith('|'+l.id)) used+=Math.max(0,BAL.byItemLoc[k]); });
+    return {l,free:l.capacity-used}; }).sort((a,b)=>b.free-a.free)[0];
+  return {loc:free.l.id, why:`Recommended ${free.l.id} — emptiest location in this warehouse (${free.free} units of space).`};
+}
+function doReceive(){
+  const it=ITEM(document.getElementById('rItem').value);
+  const wh=document.getElementById('rWh').value, qty=+document.getElementById('rQty').value;
+  const loc=document.getElementById('rLoc').value;
+  if(!(qty>0)) return toast('Enter a quantity greater than zero.',true);
+  const exp=document.getElementById('rExp').value;
+  if(it.expiryControlled&&!exp) return toast('This item is expiry controlled. Enter the expiry date on the delivery.',true);
+  const cond=document.getElementById('rCond').value;
+  const tx=postSafe({type:'Receive', itemId:it.id, qty, locId:loc, wh,
+    batch:document.getElementById('rBatch').value, expiry:exp,
+    ref:document.getElementById('rPO').value+' / '+document.getElementById('rDN').value,
+    party:document.getElementById('rSup').value, partyType:'Supplier',
+    note:(cond==='Good'?'':'QUARANTINE — ')+document.getElementById('rNote').value,
+    photo:document.getElementById('rPhoto').checked});
+  logAudit('Receive', it.sku+' @ '+loc, onHand(it.id,wh)-qty, onHand(it.id,wh), tx.ref);
+  toast(`Received ${qty} ${it.uom} of ${it.name} into ${loc}.`);
+  UI.filters.item=null; UI.render();
+}
+function postSafe(t){
+  if(!navigator.onLine){ DB.queue.push(t); toast('Offline — transaction queued and will sync automatically.'); }
+  return post(t);
+}
+
+/* ---------------- issue ---------------- */
+VIEWS.issue = function(){
+  const pre=UI.filters.item?ITEM(UI.filters.item):null;
+  const wh = UI.wh==='*'?'WH-01':UI.wh;
+  return pageHdr('Issue stock', DB.settings.lang==='ar'?'صرف المواد لمشروع أو قسم أو موظف':'Issue material against a project, department, employee, vehicle or work order.') + `
+  <div class="panel pad" style="max-width:820px">
+    <div class="row">
+      <div class="field"><label class="f">${esc(L('Item'))}</label><select class="f" id="iItem" onchange="issueInfo()">
+        ${DB.items.map(i=>`<option value="${i.id}" ${pre&&pre.id===i.id?'selected':''}>${esc(iname(i))} — ${esc(i.sku)}</option>`).join('')}</select></div>
+      <div class="field"><label class="f">${esc(L('Warehouse'))}</label><select class="f" id="iWh" onchange="issueInfo()">
+        ${DB.warehouses.map(w=>`<option value="${w.id}" ${wh===w.id?'selected':''}>${esc(wname(w))}</option>`).join('')}</select></div>
+    </div>
+    <div id="iInfo"></div>
+    <div class="row">
+      <div class="field"><label class="f">${esc(L('Quantity'))}</label><input class="f num" id="iQty" type="number" min="1" value="10" oninput="issueInfo(true)"></div>
+      <div class="field"><label class="f">${esc(L('Location'))}</label><select class="f" id="iLoc"></select></div>
+      <div class="field"><label class="f">${esc(L('Batch'))}</label><select class="f" id="iBatch" onchange="fefoCheck()"></select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label class="f">Issue to</label><select class="f" id="iType" onchange="issueParty()">
+        <option>Project</option><option>Department</option><option>Employee</option><option>Vehicle</option><option>Work order</option><option>Customer</option></select></div>
+      <div class="field" style="flex:2"><label class="f">Recipient</label><select class="f" id="iParty"></select></div>
+    </div>
+    <div class="row"><div class="field" style="flex:1"><label class="f">Purpose</label><input class="f" id="iNote" placeholder="Job number, work description…"></div></div>
+    <div id="fefoWarn"></div>
+    <label class="sm" style="display:flex;gap:6px;align-items:center;margin:8px 0 12px"><input type="checkbox" id="iSign" checked> Digital signature captured from receiver and storekeeper</label>
+    <button class="btn big" onclick="doIssue()">${DB.settings.lang==='ar'?'ترحيل الصرف':'Post issue'}</button>
+  </div>`;
+};
+AFTER.issue = ()=>{ issueParty(); issueInfo(); };
+function issueParty(){
+  const t=document.getElementById('iType').value, s=document.getElementById('iParty');
+  const opts = t==='Project'?DB.projects.map(p=>p.name) : t==='Department'?DB.departments.map(d=>d.name)
+    : t==='Employee'?['Saleem Hassan','Anil Kumar','Mary Fernandez','Ali Zahid','Sandeep R.']
+    : t==='Vehicle'?['Toyota Hilux 254789','Nissan Urvan 118203','Isuzu NPR 993410']
+    : t==='Work order'?['WO-'+ri(5000,5999),'WO-'+ri(5000,5999),'WO-'+ri(5000,5999)]
+    : ['Msheireb Properties','Qatari Diar','Hamad Medical Corp'];
+  s.innerHTML = opts.map(o=>`<option>${esc(o)}</option>`).join('');
+}
+function issueInfo(qtyOnly){
+  const it=ITEM(document.getElementById('iItem').value), wh=document.getElementById('iWh').value;
+  const oh=onHand(it.id,wh), rv=reserved(it.id,wh), av=oh-rv, q=+document.getElementById('iQty').value||0;
+  document.getElementById('iInfo').innerHTML = `<div class="note ${q>av?'crit':'teal'}" style="margin-bottom:10px">
+    <strong>${esc(L('Physical'))} ${num(oh)} · ${esc(L('Reserved'))} ${num(rv)} · ${esc(L('Available'))} ${num(av)} ${esc(it.uom)}</strong>
+    <div class="why">${q>av? `Requested ${num(q)} exceeds available stock. ${DB.settings.allowNegative?'Negative stock is enabled — this will post a negative balance.':'Negative stock is blocked in settings, so this issue cannot be posted.'}`
+      : 'Reserved quantity belongs to approved material requests and is not free to issue.'}</div></div>`;
+  if(qtyOnly) return;
+  const ls=locsFor(it.id,wh);
+  document.getElementById('iLoc').innerHTML = ls.length? ls.map(l=>`<option value="${l.loc}">${esc(l.loc)} · ${l.qty}</option>`).join('') : `<option value="">— no stock —</option>`;
+  const bs=batchesFor(it.id);
+  document.getElementById('iBatch').innerHTML = bs.length? bs.map((b,i)=>`<option value="${esc(b.batch)}" ${i===0?'selected':''}>${esc(b.batch)}${b.expiry?' · exp '+b.expiry:''} · ${b.qty}</option>`).join('') : `<option value="">n/a</option>`;
+  fefoCheck();
+}
+function fefoCheck(){
+  const it=ITEM(document.getElementById('iItem').value);
+  const sel=document.getElementById('iBatch').value, bs=batchesFor(it.id).filter(b=>b.expiry);
+  const w=document.getElementById('fefoWarn'); if(!w) return;
+  if(DB.settings.fefo && bs.length && sel && bs[0].batch!==sel){
+    w.innerHTML = `<div class="note"><strong>FEFO warning</strong><div class="why">Batch ${esc(bs[0].batch)} expires on ${esc(bs[0].expiry)} and should be issued before ${esc(sel)}. Change the batch, or record a reason on the issue.</div></div>`;
+  } else w.innerHTML='';
+}
+function doIssue(){
+  const it=ITEM(document.getElementById('iItem').value), wh=document.getElementById('iWh').value;
+  const q=+document.getElementById('iQty').value, loc=document.getElementById('iLoc').value;
+  const av=onHand(it.id,wh)-reserved(it.id,wh);
+  if(!(q>0)) return toast('Enter a quantity greater than zero.',true);
+  if(!loc) return toast('There is no stock of this item in the selected warehouse.',true);
+  if(q>av && !DB.settings.allowNegative) return toast(`Blocked: only ${av} ${it.uom} available. Enable negative stock in Settings if this is intended.`,true);
+  if(q>atLoc(it.id,loc) && !DB.settings.allowNegative) return toast(`Blocked: bin ${loc} holds only ${atLoc(it.id,loc)} ${it.uom}.`,true);
+  const tx=postSafe({type:'Issue', itemId:it.id, qty:-q, locId:loc, wh, batch:document.getElementById('iBatch').value,
+    ref:'ISS-'+String(10000+DB.txns.length), party:document.getElementById('iParty').value, partyType:document.getElementById('iType').value,
+    note:document.getElementById('iNote').value});
+  logAudit('Issue', it.sku+' @ '+loc, av, av-q, tx.party);
+  toast(`Issued ${q} ${it.uom} of ${it.name} to ${tx.party}.`);
+  UI.filters.item=null; UI.render();
+}
+
+/* ---------------- transfer ---------------- */
+VIEWS.xfer = function(){
+  const pre=UI.filters.item?ITEM(UI.filters.item):null;
+  return pageHdr('Transfer', DB.settings.lang==='ar'?'نقل بين المستودعات أو بين المواقع':'Move stock between warehouses, or between racks inside one warehouse. Both legs post to the ledger under one reference.') + `
+  <div class="panel pad" style="max-width:760px">
+    <div class="row">
+      <div class="field" style="flex:2"><label class="f">${esc(L('Item'))}</label><select class="f" id="xItem" onchange="xferLocs()">
+        ${DB.items.map(i=>`<option value="${i.id}" ${pre&&pre.id===i.id?'selected':''}>${esc(iname(i))} — ${esc(i.sku)}</option>`).join('')}</select></div>
+      <div class="field"><label class="f">${esc(L('Quantity'))}</label><input class="f num" id="xQty" type="number" min="1" value="10"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label class="f">From warehouse</label><select class="f" id="xFromWh" onchange="xferLocs()">
+        ${DB.warehouses.map(w=>`<option value="${w.id}">${esc(wname(w))}</option>`).join('')}</select></div>
+      <div class="field"><label class="f">From location</label><select class="f" id="xFrom"></select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label class="f">To warehouse</label><select class="f" id="xToWh" onchange="xferLocs()">
+        ${DB.warehouses.map((w,i)=>`<option value="${w.id}" ${i===1?'selected':''}>${esc(wname(w))}</option>`).join('')}</select></div>
+      <div class="field"><label class="f">To location</label><select class="f" id="xTo"></select></div>
+    </div>
+    <div class="field"><label class="f">${esc(L('Reason'))}</label><input class="f" id="xNote" placeholder="Rebalancing, site mobilisation, consolidation…"></div>
+    <button class="btn big" onclick="doTransfer()">${DB.settings.lang==='ar'?'ترحيل التحويل':'Post transfer'}</button>
+  </div>`;
+};
+AFTER.xfer = ()=>xferLocs();
+function xferLocs(){
+  const it=ITEM(document.getElementById('xItem').value);
+  const fw=document.getElementById('xFromWh').value, tw=document.getElementById('xToWh').value;
+  const src=locsFor(it.id,fw);
+  document.getElementById('xFrom').innerHTML = src.length? src.map(l=>`<option value="${l.loc}">${esc(l.loc)} · ${l.qty}</option>`).join('') : `<option value="">— no stock —</option>`;
+  const rec=suggestLocation(it,tw);
+  document.getElementById('xTo').innerHTML = locsOf(tw).map(l=>`<option value="${l.id}" ${rec.loc===l.id?'selected':''}>${esc(l.id)}</option>`).join('');
+}
+function doTransfer(){
+  const it=ITEM(document.getElementById('xItem').value), q=+document.getElementById('xQty').value;
+  const from=document.getElementById('xFrom').value, to=document.getElementById('xTo').value;
+  const fw=document.getElementById('xFromWh').value, tw=document.getElementById('xToWh').value;
+  if(!from) return toast('There is no stock of this item in the source warehouse.',true);
+  if(from===to) return toast('Source and destination locations are the same.',true);
+  if(!(q>0)) return toast('Enter a quantity greater than zero.',true);
+  if(q>atLoc(it.id,from)&&!DB.settings.allowNegative) return toast(`Blocked: ${from} holds only ${atLoc(it.id,from)} ${it.uom}.`,true);
+  const ref='TRF-'+String(2000+DB.txns.length);
+  const note=document.getElementById('xNote').value;
+  postSafe({type:'Transfer', itemId:it.id, qty:-q, locId:from, wh:fw, ref, note:`To ${to}. ${note}`});
+  postSafe({type:'Transfer', itemId:it.id, qty:q, locId:to, wh:tw, ref, note:`From ${from}. ${note}`});
+  logAudit('Transfer', it.sku, from, to, ref+' · '+q+' '+it.uom);
+  toast(`Transferred ${q} ${it.uom} from ${from} to ${to}.`);
+  UI.filters.item=null; UI.render();
+}
+
+/* ---------------- stock count ---------------- */
+let COUNT = null;
+VIEWS.count = function(){
+  if(!COUNT) return countStart();
+  const wh=COUNT.wh;
+  return pageHdr('Stock count', `${esc(COUNT.scope)} · ${COUNT.lines.length} ${DB.settings.lang==='ar'?'سطر':'lines'}`,
+    `<button class="btn ghost sm" onclick="COUNT=null;UI.render()">${esc(L('Cancel'))}</button>`) + `
+  <div class="panel">
+    <div class="t-scroll"><table><thead><tr>
+      <th>${esc(L('Item'))}</th><th>${esc(L('Location'))}</th><th class="r">${esc(L('System'))}</th>
+      <th class="r">${esc(L('Physical'))}</th><th class="r">${esc(L('Variance'))}</th><th>${esc(L('Reason'))}</th></tr></thead><tbody>
+      ${COUNT.lines.map((l,ix)=>{ const it=ITEM(l.itemId);
+        return `<tr><td>${esc(iname(it))}<div class="xs mono dim">${esc(it.sku)}</div></td>
+        <td class="mono xs">${esc(l.loc)}</td><td class="r qty">${num(l.system)}</td>
+        <td class="r"><input class="f num" style="width:92px;text-align:end" type="number" value="${l.physical}" onchange="countSet(${ix},this.value)"></td>
+        <td class="r qty" style="color:${l.variance<0?'var(--crit)':l.variance>0?'var(--ok)':'var(--ink-3)'}">${l.variance>0?'+':''}${l.variance}</td>
+        <td>${Math.abs(l.variance)>0?`<input class="f" style="min-width:180px" placeholder="Explain the variance" value="${esc(l.note)}" onchange="COUNT.lines[${ix}].note=this.value">`:'<span class="dim xs">—</span>'}</td></tr>`;}).join('')}
+    </tbody></table></div>
+    <div class="pad between">
+      <div class="sm muted">${DB.settings.lang==='ar'?'الفروق تُرحّل كتسويات وتُسجل في سجل التدقيق.':'Closing the count posts variances as adjustment transactions and writes them to the audit trail.'}</div>
+      <button class="btn" onclick="countClose()">${DB.settings.lang==='ar'?'إقفال الجرد':'Close count and post variances'}</button>
+    </div>
+  </div>`;
+};
+function countStart(){
+  const wh=UI.wh==='*'?'WH-01':UI.wh;
+  const zones=[...new Set(locsOf(wh).map(l=>l.zone))];
+  return pageHdr('Stock count', DB.settings.lang==='ar'?'اختر النطاق ثم أدخل الكميات الفعلية':'Pick a scope, then key in what is physically on the shelf. The system shows expected quantities only after you select.') + `
+  <div class="panel pad" style="max-width:620px">
+    <div class="row">
+      <div class="field"><label class="f">${esc(L('Warehouse'))}</label><select class="f" id="cWh" onchange="UI.render()">
+        ${DB.warehouses.map(w=>`<option value="${w.id}" ${wh===w.id?'selected':''}>${esc(wname(w))}</option>`).join('')}</select></div>
+      <div class="field"><label class="f">Zone</label><select class="f" id="cZone"><option value="">All zones</option>
+        ${zones.map(z=>`<option>${z}</option>`).join('')}</select></div>
+    </div>
+    <button class="btn big" onclick="countBuild()">${DB.settings.lang==='ar'?'ابدأ الجرد':'Start count sheet'}</button>
+  </div>
+  ${DB.counts.length?`<div class="panel pad" style="margin-top:14px"><h3 style="margin-bottom:10px">${DB.settings.lang==='ar'?'عمليات جرد سابقة':'Closed counts'}</h3>
+    <table><thead><tr><th>Count</th><th>${esc(L('Warehouse'))}</th><th>Date</th><th>By</th><th class="r">Lines</th><th class="r">Accuracy</th></tr></thead><tbody>
+    ${DB.counts.slice().reverse().map(c=>`<tr><td class="mono xs">${esc(c.id)}</td><td>${esc(wname(DB.warehouses.find(w=>w.id===c.wh)))}</td>
+      <td class="xs">${dstr(c.ts)}</td><td class="xs">${esc(c.by)}</td><td class="r num">${c.lines.length}</td>
+      <td class="r"><span class="tag ${c.accuracy>=98?'t-ok':c.accuracy>=95?'t-warn':'t-crit'}">${c.accuracy}%</span></td></tr>`).join('')}
+    </tbody></table></div>`:''}`;
+}
+function countBuild(){
+  const wh=document.getElementById('cWh').value, zone=document.getElementById('cZone').value;
+  sync();
+  const lines=[];
+  Object.keys(BAL.byItemLoc).forEach(k=>{
+    const [itemId,loc]=k.split('|'); const q=BAL.byItemLoc[k];
+    if(q<=0||!loc) return; const l=LOC(loc); if(!l||l.wh!==wh) return; if(zone&&l.zone!==zone) return;
+    lines.push({itemId, loc, system:q, physical:q, variance:0, note:''});
+  });
+  if(!lines.length) return toast('No stock is recorded in that scope.',true);
+  COUNT={wh, scope:`${wh}${zone?' / Zone '+zone:''}`, lines:lines.slice(0,25), ts:Date.now()};
+  UI.render();
+}
+function countSet(ix,v){ const l=COUNT.lines[ix]; l.physical=+v||0; l.variance=l.physical-l.system; UI.render(); }
+function countClose(){
+  const bad=COUNT.lines.filter(l=>Math.abs(l.variance)>0&&!l.note.trim());
+  if(bad.length) return toast(`${bad.length} variance line${bad.length>1?'s':''} still need${bad.length>1?'':'s'} an explanation.`,true);
+  let posted=0;
+  COUNT.lines.forEach(l=>{ if(!l.variance) return;
+    postSafe({type:'Adjust', itemId:l.itemId, qty:l.variance, locId:l.loc, wh:COUNT.wh,
+      ref:'SC-'+String(200+DB.counts.length), reason:'Physical count variance — '+l.note});
+    logAudit('Count variance', ITEM(l.itemId).sku+' @ '+l.loc, l.system, l.physical, l.note); posted++; });
+  const acc=+(COUNT.lines.filter(l=>!l.variance).length/COUNT.lines.length*100).toFixed(1);
+  DB.counts.push({id:'SC-'+String(200+DB.counts.length), wh:COUNT.wh, ts:Date.now(), by:UI.user.name, status:'Closed', lines:COUNT.lines, accuracy:acc});
+  toast(`Count closed at ${acc}% accuracy. ${posted} variance${posted===1?'':'s'} posted.`);
+  COUNT=null; UI.render();
+}
+
+/* ==========================================================================
+   Layer 7: requests, approvals, adjustments
+   ========================================================================== */
+const REQ_FLOW=['Requested','Approved','Reserved','Issued','Completed'];
+VIEWS.req = function(){
+  const wh=UI.wh, list=DB.requests.filter(r=>wh==='*'||r.wh===wh).sort((a,b)=>b.ts-a.ts);
+  return pageHdr('Requests', DB.settings.lang==='ar'?'طلبات المواد من الأقسام والمشاريع':'Material requests from departments and projects. Approval reserves stock; reserved stock is not available to issue elsewhere.',
+    `<button class="btn sm" onclick="newRequest()">${DB.settings.lang==='ar'?'طلب جديد':'New request'}</button>`) + `
+  <div class="grid g4" style="margin-bottom:14px">
+    ${['Requested','Approved','Reserved','Completed'].map(s=>kpi(s, list.filter(r=>r.status===s).length, '', s==='Requested'?'warn':s==='Completed'?'ok':'teal')).join('')}
+  </div>
+  <div class="panel"><div class="t-scroll"><table><thead><tr>
+    <th>Request</th><th>${esc(L('Requester'))}</th><th>${esc(L('Department'))}</th><th>${esc(L('Project'))}</th>
+    <th class="r">Lines</th><th>${esc(L('Priority'))}</th><th>Needed</th><th>${esc(L('Status'))}</th><th></th></tr></thead><tbody>
+    ${list.map(r=>`<tr class="clk" onclick="showRequest('${r.id}')">
+      <td class="mono xs">${esc(r.id)}<div class="xs dim">${dstr(r.ts)}</div></td>
+      <td class="xs">${esc(r.requester)}</td><td class="xs">${esc(r.dept)}</td><td class="xs">${esc(r.project)}</td>
+      <td class="r num">${r.lines.length}</td>
+      <td><span class="tag ${r.priority==='Urgent'?'t-crit':r.priority==='High'?'t-warn':'t-neutral'}">${esc(r.priority)}</span></td>
+      <td class="xs mono">${esc(r.need)}</td>
+      <td><span class="tag ${r.status==='Completed'?'t-ok':r.status==='Requested'?'t-warn':'t-teal'}">${esc(r.status)}</span></td>
+      <td class="noprint">${nextAction(r)}</td></tr>`).join('')}
+  </tbody></table></div></div>`;
+};
+function nextAction(r){
+  if(r.status==='Requested'&&UI.can('approve')) return `<button class="btn sm" onclick="event.stopPropagation();approveReq('${r.id}')">${esc(L('Approve'))}</button>`;
+  if(r.status==='Approved') return `<button class="btn sm ghost" onclick="event.stopPropagation();reserveReq('${r.id}')">Reserve stock</button>`;
+  if(r.status==='Reserved') return `<button class="btn sm" onclick="event.stopPropagation();issueReq('${r.id}')">${esc(L('Issue stock'))}</button>`;
+  return '';
+}
+function showRequest(id){
+  const r=DB.requests.find(x=>x.id===id); if(!r) return;
+  const ix=REQ_FLOW.indexOf(r.status);
+  UI.openDrawer(r.id+' · '+r.project, `
+    <div class="stepflow" style="margin-bottom:14px">
+      ${REQ_FLOW.map((s,k)=>`<span class="step ${k<ix?'done':k===ix?'now':''}">${esc(s)}</span>${k<REQ_FLOW.length-1?'<span class="dim">›</span>':''}`).join('')}
+    </div>
+    <table style="margin-bottom:14px"><tbody>
+      <tr><td class="muted">${esc(L('Requester'))}</td><td class="r">${esc(r.requester)}</td></tr>
+      <tr><td class="muted">${esc(L('Department'))}</td><td class="r">${esc(r.dept)}</td></tr>
+      <tr><td class="muted">${esc(L('Warehouse'))}</td><td class="r">${esc(wname(DB.warehouses.find(w=>w.id===r.wh)))}</td></tr>
+      <tr><td class="muted">${esc(L('Priority'))}</td><td class="r">${esc(r.priority)}</td></tr>
+      <tr><td class="muted">Required by</td><td class="r mono">${esc(r.need)}</td></tr>
+      <tr><td class="muted">${esc(L('Reason'))}</td><td class="r">${esc(r.reason)}</td></tr>
+    </tbody></table>
+    <div class="panel pad" style="margin-bottom:14px">
+      <h4 style="margin-bottom:8px">Lines</h4>
+      <table><thead><tr><th>${esc(L('Item'))}</th><th class="r">Req</th><th class="r">Appr</th><th class="r">Issued</th><th class="r">${esc(L('Available'))}</th></tr></thead><tbody>
+      ${r.lines.map(l=>{const it=ITEM(l.itemId); const av=available(l.itemId,r.wh);
+        return `<tr><td>${esc(iname(it))}<div class="xs mono dim">${esc(it.sku)}</div></td>
+        <td class="r qty">${l.qty}</td><td class="r qty">${l.approvedQty}</td><td class="r qty">${l.issuedQty}</td>
+        <td class="r qty" style="color:${av<l.qty?'var(--crit)':'inherit'}">${num(av)}</td></tr>`;}).join('')}
+      </tbody></table>
+    </div>
+    <div class="panel pad" style="margin-bottom:14px"><h4 style="margin-bottom:8px">History</h4>
+      ${r.history.map(h=>`<div class="between sm" style="padding:4px 0;border-bottom:1px solid var(--line-2)"><span>${esc(h.s)}</span><span class="muted xs">${esc(h.by)} · ${tstr(h.ts)}</span></div>`).join('')}</div>
+    <div class="row tight">${nextAction(r)}</div>`);
+}
+function approveReq(id){
+  const r=DB.requests.find(x=>x.id===id);
+  r.lines.forEach(l=>{ l.approvedQty = Math.min(l.qty, Math.max(0,available(l.itemId,r.wh))); });
+  const short=r.lines.filter(l=>l.approvedQty<l.qty);
+  r.status='Approved'; r.history.push({s:'Approved',ts:Date.now(),by:UI.user.name});
+  logAudit('Approve request', r.id, 'Requested','Approved', r.reason);
+  toast(short.length? `${r.id} approved with ${short.length} line${short.length>1?'s':''} reduced to available stock.` : `${r.id} approved in full.`);
+  UI.closeDrawer(); UI.render();
+}
+function reserveReq(id){
+  const r=DB.requests.find(x=>x.id===id);
+  r.status='Reserved'; r.history.push({s:'Reserved',ts:Date.now(),by:UI.user.name});
+  logAudit('Reserve stock', r.id, 'Approved','Reserved','');
+  toast(`Stock reserved for ${r.id}. Physical quantity is unchanged; available quantity has dropped.`);
+  UI.closeDrawer(); UI.render();
+}
+function issueReq(id){
+  const r=DB.requests.find(x=>x.id===id);
+  let n=0;
+  r.lines.forEach(l=>{
+    const q=l.approvedQty-l.issuedQty; if(q<=0) return;
+    const loc=(locsFor(l.itemId,r.wh)[0]||{}).loc;
+    if(!loc) return;
+    postSafe({type:'Issue', itemId:l.itemId, qty:-Math.min(q,atLoc(l.itemId,loc)), locId:loc, wh:r.wh,
+      ref:r.id, party:r.project, partyType:'Project', note:r.dept+' — against material request'});
+    l.issuedQty=l.approvedQty; n++;
+  });
+  r.status='Completed'; r.history.push({s:'Issued',ts:Date.now(),by:UI.user.name},{s:'Completed',ts:Date.now(),by:'System'});
+  logAudit('Issue against request', r.id,'Reserved','Completed', n+' lines');
+  toast(`${r.id} issued and closed. ${n} line${n===1?'':'s'} posted to the ledger.`);
+  UI.closeDrawer(); UI.render();
+}
+function newRequest(){
+  UI.openDrawer(DB.settings.lang==='ar'?'طلب مواد جديد':'New material request', `
+    <div class="row">
+      <div class="field"><label class="f">${esc(L('Warehouse'))}</label><select class="f" id="nrWh">${DB.warehouses.map(w=>`<option value="${w.id}">${esc(wname(w))}</option>`).join('')}</select></div>
+      <div class="field"><label class="f">${esc(L('Priority'))}</label><select class="f" id="nrPrio"><option>Normal</option><option>High</option><option>Urgent</option></select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label class="f">${esc(L('Department'))}</label><select class="f" id="nrDept">${DB.departments.map(d=>`<option>${esc(d.name)}</option>`).join('')}</select></div>
+      <div class="field"><label class="f">${esc(L('Project'))}</label><select class="f" id="nrPrj">${DB.projects.map(p=>`<option>${esc(p.name)}</option>`).join('')}</select></div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:2"><label class="f">${esc(L('Item'))}</label><select class="f" id="nrItem">${DB.items.map(i=>`<option value="${i.id}">${esc(iname(i))} — ${esc(i.sku)}</option>`).join('')}</select></div>
+      <div class="field"><label class="f">${esc(L('Quantity'))}</label><input class="f num" id="nrQty" type="number" min="1" value="20"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label class="f">Required by</label><input class="f" id="nrNeed" type="date" value="${dstr(T0+5*DAY)}"></div>
+      <div class="field" style="flex:2"><label class="f">${esc(L('Reason'))}</label><input class="f" id="nrWhy" placeholder="Why this material is needed"></div>
+    </div>
+    <button class="btn" onclick="saveRequest()">${DB.settings.lang==='ar'?'إرسال الطلب':'Submit request'}</button>`);
+}
+function saveRequest(){
+  const q=+document.getElementById('nrQty').value;
+  if(!(q>0)) return toast('Enter a quantity greater than zero.',true);
+  const r={id:'MR-'+String(2700+DB.requests.length), ts:Date.now(), requester:UI.user.name,
+    dept:document.getElementById('nrDept').value, project:document.getElementById('nrPrj').value,
+    wh:document.getElementById('nrWh').value, priority:document.getElementById('nrPrio').value, status:'Requested',
+    need:document.getElementById('nrNeed').value, reason:document.getElementById('nrWhy').value||'—',
+    lines:[{itemId:document.getElementById('nrItem').value, qty:q, approvedQty:0, issuedQty:0}],
+    history:[{s:'Requested',ts:Date.now(),by:UI.user.name}]};
+  DB.requests.push(r); logAudit('Create request', r.id,'','Requested', r.reason);
+  toast(`${r.id} submitted for approval.`); UI.closeDrawer(); UI.go('req');
+}
+function raisePR(itemId){
+  const it=ITEM(itemId), wh=UI.wh==='*'?it.homeWh:UI.wh, r=reorderPoint(it,wh);
+  const q=Math.max(it.reorderQty, Math.ceil(r.rop*1.6-available(it.id,wh)));
+  DB.requests.push({id:'PR-'+String(3300+DB.requests.length), ts:Date.now(), requester:UI.user.name, dept:'Procurement',
+    project:'Stock replenishment', wh, priority: daysToZero(it,wh)<it.lead?'Urgent':'Normal', status:'Requested',
+    need:dstr(Date.now()+it.lead*DAY), reason:`Auto-generated from reorder engine. Available ${available(it.id,wh)} against reorder point ${r.rop}.`,
+    lines:[{itemId, qty:q, approvedQty:0, issuedQty:0}], history:[{s:'Requested',ts:Date.now(),by:UI.user.name}]});
+  logAudit('Purchase request', itemId,'', q, 'Reorder engine recommendation');
+  toast(`Purchase request raised for ${q} ${it.uom} of ${it.name}.`); UI.closeDrawer(); UI.render();
+}
+
+/* ---------------- adjustments & approvals ---------------- */
+VIEWS.adj = function(){
+  const wh=UI.wh;
+  const pend=DB.adjustments.filter(a=>a.status==='Pending'&&(wh==='*'||a.wh===wh));
+  const recent=DB.txns.filter(t=>t.type==='Adjust'&&(wh==='*'||t.wh===wh)).sort((a,b)=>b.ts-a.ts).slice(0,25);
+  return pageHdr('Adjustments & approvals', DB.settings.lang==='ar'?'كل تسوية تحتاج سببًا، ومستوى الاعتماد يعتمد على القيمة':'Every adjustment needs a reason. The approval level is set by the value of the adjustment, not by who raised it.',
+    `<button class="btn sm" onclick="newAdj()">New adjustment</button>`) + `
+  <div class="panel pad" style="margin-bottom:14px">
+    <h3 style="margin-bottom:10px">Approval thresholds</h3>
+    <table><tbody>${DB.settings.adjustThresholds.map((t,i)=>{
+      const lo = i===0?0:DB.settings.adjustThresholds[i-1].max;
+      return `<tr><td class="mono xs">${money(lo)} – ${t.max===Infinity?'above':money(t.max)}</td><td class="r">${esc(t.role)}</td></tr>`;}).join('')}</tbody></table>
+    <div class="why" style="margin-top:8px">Thresholds are configurable in Settings. Nothing changes a balance without passing the matching approval.</div>
+  </div>
+  ${pend.length?`<div class="panel pad" style="margin-bottom:14px">
+    <h3 style="margin-bottom:10px">${DB.settings.lang==='ar'?'بانتظار الاعتماد':'Waiting for approval'}</h3>
+    <div class="t-scroll"><table><thead><tr><th>Ref</th><th>${esc(L('Item'))}</th><th class="r">${esc(L('Quantity'))}</th>
+      <th class="r">${esc(L('Value'))}</th><th>${esc(L('Reason'))}</th><th>Raised by</th><th>Approver</th><th class="noprint"></th></tr></thead><tbody>
+    ${pend.map(a=>{const it=ITEM(a.itemId);return `<tr>
+      <td class="mono xs">${esc(a.id)}<div class="xs dim">${dstr(a.ts)}</div></td>
+      <td>${esc(iname(it))}<div class="xs mono dim">${esc(it.sku)}</div></td>
+      <td class="r qty" style="color:${a.qty<0?'var(--crit)':'var(--ok)'}">${a.qty>0?'+':''}${a.qty}</td>
+      <td class="r num">${money(a.value)}</td><td class="xs">${esc(a.reason)}${a.photo?' 📷':''}</td>
+      <td class="xs">${esc(a.by)}</td><td class="xs">${esc(a.approver)}</td>
+      <td class="noprint row tight">${UI.can('approve')?`<button class="btn sm" onclick="decideAdj('${a.id}',1)">${esc(L('Approve'))}</button>
+        <button class="btn sm ghost" onclick="decideAdj('${a.id}',0)">${esc(L('Reject'))}</button>`:'<span class="xs dim">No permission</span>'}</td></tr>`;}).join('')}
+    </tbody></table></div></div>`:`<div class="panel empty"><h4>Nothing waiting for approval</h4><p>Adjustments raised by storekeepers will queue here.</p></div>`}
+  <div class="panel pad">
+    <h3 style="margin-bottom:10px">${DB.settings.lang==='ar'?'تسويات مرحّلة':'Posted adjustments'}</h3>
+    ${txnTable(recent,25)}
+  </div>`;
+};
+function newAdj(){
+  UI.openDrawer('New adjustment', `
+    <div class="note" style="margin-bottom:12px">Adjustments never overwrite a balance. They post a correcting transaction that stays visible in the ledger.</div>
+    <div class="row">
+      <div class="field" style="flex:2"><label class="f">${esc(L('Item'))}</label><select class="f" id="aItem">${DB.items.map(i=>`<option value="${i.id}">${esc(iname(i))} — ${esc(i.sku)}</option>`).join('')}</select></div>
+      <div class="field"><label class="f">${esc(L('Quantity'))} ±</label><input class="f num" id="aQty" type="number" value="-2"></div>
+    </div>
+    <div class="field"><label class="f">${esc(L('Warehouse'))}</label><select class="f" id="aWh">${DB.warehouses.map(w=>`<option value="${w.id}">${esc(wname(w))}</option>`).join('')}</select></div>
+    <div class="field"><label class="f">${esc(L('Reason'))}</label><textarea class="f" id="aWhy" rows="2" placeholder="Damaged, expired, found during count, theft investigation…"></textarea></div>
+    <label class="sm" style="display:flex;gap:6px;align-items:center;margin-bottom:12px"><input type="checkbox" id="aPhoto" checked> Photo evidence attached</label>
+    <button class="btn" onclick="saveAdj()">Submit for approval</button>`);
+}
+function saveAdj(){
+  const it=ITEM(document.getElementById('aItem').value), q=+document.getElementById('aQty').value;
+  const why=document.getElementById('aWhy').value.trim();
+  if(!q) return toast('Enter a non-zero adjustment quantity.',true);
+  if(why.length<5) return toast('A reason is required before an adjustment can be raised.',true);
+  const val=Math.abs(q*it.cost);
+  const role=DB.settings.adjustThresholds.find(t=>val<=t.max).role;
+  const a={id:'ADJ-'+String(910+DB.adjustments.length), ts:Date.now(), wh:document.getElementById('aWh').value,
+    itemId:it.id, qty:q, reason:why, by:UI.user.name, value:val, status:'Pending', approver:role, photo:document.getElementById('aPhoto').checked};
+  DB.adjustments.push(a); logAudit('Raise adjustment', it.sku, '', q, why);
+  toast(`${a.id} raised. Value ${money(val)} routes to ${role} for approval.`);
+  UI.closeDrawer(); UI.render();
+}
+function decideAdj(id,ok){
+  const a=DB.adjustments.find(x=>x.id===id); const it=ITEM(a.itemId);
+  if(ok){
+    const loc=(locsFor(a.itemId,a.wh)[0]||{}).loc||locsOf(a.wh)[0].id;
+    const before=onHand(a.itemId,a.wh);
+    postSafe({type:'Adjust', itemId:a.itemId, qty:a.qty, locId:loc, wh:a.wh, ref:a.id, reason:a.reason, photo:a.photo});
+    a.status='Approved';
+    logAudit('Approve adjustment', it.sku+' @ '+loc, before, onHand(a.itemId,a.wh), a.reason);
+    toast(`${a.id} approved and posted.`);
+  } else { a.status='Rejected'; logAudit('Reject adjustment', it.sku,'Pending','Rejected',a.reason); toast(`${a.id} rejected. Stock is unchanged.`); }
+  UI.render();
+}
+
+/* ==========================================================================
+   Layer 8: digital twin, heat map
+   ========================================================================== */
+VIEWS.twin = function(){
+  const wh=UI.wh==='*'?'WH-01':UI.wh;
+  const racks=rackUtil(wh);
+  const zones=[...new Set(racks.map(r=>r.zone))];
+  const w=DB.warehouses.find(x=>x.id===wh);
+  return pageHdr('Digital twin', `${esc(wname(w))} · ${esc(w.site)} · ${racks.length} racks · ${locsOf(wh).length} bins`,
+    UI.wh==='*'?`<span class="tag t-neutral">Showing ${wh}</span>`:'') + `
+  <div class="legend">
+    <span><i style="background:var(--over)"></i>Under 30% — space available</span>
+    <span><i style="background:var(--ok)"></i>30–75% — healthy</span>
+    <span><i style="background:var(--amber)"></i>75–92% — near full</span>
+    <span><i style="background:var(--crit)"></i>Over 92% — no room to receive</span>
+  </div>
+  ${zones.map(z=>{
+    const rs=racks.filter(r=>r.zone===z);
+    const zu=rs.reduce((s,r)=>s+r.used,0), zc=rs.reduce((s,r)=>s+r.cap,0);
+    return `<div class="zone"><div class="zonehead"><h3>Zone ${esc(z)}</h3>
+      <span class="sm muted num">${num(zu)} / ${num(zc)} units · ${(zu/zc*100).toFixed(0)}% utilised</span></div>
+      <div class="racks">${rs.map(r=>{
+        const p=r.cap?r.used/r.cap*100:0;
+        const cls=p>92?'f-crit':p>75?'f-warn':p<30?'f-low':'f-ok';
+        const st=p>92?'Full':p>75?'Near full':p<30?'Space available':'Healthy';
+        return `<button class="rack" onclick="showRack('${wh}','${z}','${r.rack}')">
+          <div class="rn">${esc(z)} · ${esc(r.rack)}</div>
+          <div class="ru">${num(r.used)} / ${num(r.cap)} · ${p.toFixed(0)}%</div>
+          <div class="fill"><i class="${cls}" style="width:${Math.min(100,p).toFixed(1)}%"></i></div>
+          <div class="xs dim" style="margin-top:4px">${st}</div></button>`;}).join('')}</div></div>`;}).join('')}`;
+};
+function showRack(wh,zone,rack){
+  sync();
+  const bins=locsOf(wh).filter(l=>l.zone===zone&&l.rack===rack);
+  const rows=[];
+  bins.forEach(l=>{ Object.keys(BAL.byItemLoc).forEach(k=>{ if(!k.endsWith('|'+l.id)) return;
+    const q=BAL.byItemLoc[k]; if(q<=0) return; rows.push({loc:l, itemId:k.split('|')[0], qty:q}); }); });
+  const cap=bins.reduce((s,b)=>s+b.capacity,0), used=rows.reduce((s,r)=>s+r.qty,0);
+  UI.openDrawer(`${wh} / Zone ${zone} / ${rack}`, `
+    <div class="grid g3" style="margin-bottom:12px">
+      ${kpi('Capacity',num(cap),'units')}${kpi('Occupied',num(used),'units','teal')}
+      ${kpi('Utilisation',(cap?used/cap*100:0).toFixed(0)+'%',(used/cap>0.92?'No room to receive':used/cap<0.3?'Space available':'Healthy'), used/cap>0.92?'crit':used/cap<0.3?'over':'ok')}
+    </div>
+    ${rows.length?`<div class="panel"><div class="t-scroll"><table><thead><tr><th>Bin</th><th>${esc(L('Item'))}</th><th class="r">${esc(L('Quantity'))}</th><th class="r">${esc(L('Value'))}</th><th>${esc(L('Status'))}</th></tr></thead><tbody>
+      ${rows.sort((a,b)=>a.loc.id.localeCompare(b.loc.id)).map(r=>{const it=ITEM(r.itemId);
+        return `<tr class="clk" onclick="showItem('${r.itemId}')"><td class="mono xs">${esc(r.loc.shelf)}/${esc(r.loc.bin)}</td>
+        <td>${esc(iname(it))}<div class="xs mono dim">${esc(it.sku)}</div></td><td class="r qty">${num(r.qty)}</td>
+        <td class="r num">${money(r.qty*it.cost).replace('QAR ','')}</td><td>${tag(statusOf(it,wh))}</td></tr>`;}).join('')}
+      </tbody></table></div></div>`:`<div class="empty"><h4>This rack is empty</h4><p>Receive stock and the location recommendation will offer it.</p></div>`}`);
+}
+
+VIEWS.heat = function(){
+  const wh=UI.wh;
+  const items=itemsIn(wh).map(i=>({i, s:statusOf(i,wh), q:onHand(i.id,wh)}));
+  const groups={crit:'Critical / out of stock',warn:'Low stock',ok:'Healthy',over:'Overstock',dead:'Dead stock'};
+  return pageHdr('Heat map', DB.settings.lang==='ar'?'حالة كل صنف بلون واحد':'Every SKU in the warehouse, coloured by condition. Click a tile to open the item.') + `
+  <div class="legend">
+    <span><i style="background:var(--ok)"></i>${esc(STATUS_LABEL.ok)}</span>
+    <span><i style="background:var(--amber)"></i>${esc(STATUS_LABEL.warn)}</span>
+    <span><i style="background:var(--crit)"></i>${esc(STATUS_LABEL.crit)}</span>
+    <span><i style="background:var(--over)"></i>${esc(STATUS_LABEL.over)}</span>
+    <span><i style="background:var(--dead)"></i>${esc(STATUS_LABEL.dead)}</span>
+  </div>
+  ${Object.keys(groups).map(g=>{
+    const list=items.filter(x=>x.s===g); if(!list.length) return '';
+    return `<div style="margin-bottom:18px"><div class="between" style="margin-bottom:8px">
+      <h3>${esc(groups[g])}</h3><span class="sm muted">${list.length} SKUs · ${money(list.reduce((s,x)=>s+Math.max(0,x.q*x.i.cost),0))}</span></div>
+      <div class="heat">${list.map(x=>`<div class="hcell h-${g}" tabindex="0" role="button" onclick="showItem('${x.i.id}')" onkeydown="if(event.key==='Enter')showItem('${x.i.id}')">
+        <div class="hn">${esc(iname(x.i))}</div><div class="hq">${num(x.q)} ${esc(x.i.uom)}</div></div>`).join('')}</div></div>`;}).join('')}`;
+};
+
+/* ==========================================================================
+   Layer 9: intelligence
+   ========================================================================== */
+const INTEL_TABS=[['reorder','Reorder engine'],['forecast','Stock prediction'],['dead','Dead stock'],['expiry','Expiry & FEFO'],
+  ['abc','ABC / XYZ'],['risk','Risk register'],['anom','Anomalies'],['tom','Warehouse tomorrow']];
+VIEWS.intel = function(){
+  const t=UI.tab.intel||'reorder', wh=UI.wh;
+  return pageHdr('Intelligence', DB.settings.lang==='ar'?'كل توصية تُعرض مع سبب حسابها':'Every recommendation shows the numbers behind it. These are calculated estimates, not guarantees.') + `
+  <div class="tabs">${INTEL_TABS.map(([k,l])=>`<button class="tab ${t===k?'on':''}" onclick="UI.tab.intel='${k}';UI.render()">${esc(l)}</button>`).join('')}</div>
+  ${({reorder:iReorder,forecast:iForecast,dead:iDead,expiry:iExpiry,abc:iABC,risk:iRisk,anom:iAnom,tom:iTom})[t](wh)}`;
+};
+function iReorder(wh){
+  const rl=reorderList(wh);
+  if(!rl.length) return `<div class="panel empty"><h4>Nothing is below its reorder point</h4><p>Every SKU has cover beyond its supplier lead time.</p></div>`;
+  const commit=rl.reduce((s,x)=>s+x.suggest*x.it.cost,0);
+  return `<div class="grid g3" style="margin-bottom:14px">
+    ${kpi('Purchase recommendations',rl.length,'below reorder point','warn')}
+    ${kpi('Estimated commitment',money(commit),'at current unit cost','teal')}
+    ${kpi('Urgent',rl.filter(x=>x.dz<x.it.lead).length,'cover shorter than lead time','crit')}</div>
+  <div class="panel"><div class="t-scroll"><table><thead><tr>
+    <th>${esc(L('Item'))}</th><th class="r">${esc(L('Available'))}</th><th class="r">Avg/day</th><th class="r">Lead</th>
+    <th class="r">Safety</th><th class="r">${esc(L('Reorder point'))}</th><th class="r">Cover</th><th class="r">Suggested</th><th class="r">${esc(L('Value'))}</th><th class="noprint"></th></tr></thead><tbody>
+    ${rl.map(x=>`<tr class="clk" onclick="showItem('${x.it.id}')">
+      <td>${esc(iname(x.it))}<div class="xs mono dim">${esc(x.it.sku)} · ${esc(DB.suppliers.find(s=>s.id===x.it.supplier).name)}</div></td>
+      <td class="r qty" style="color:${x.available<=0?'var(--crit)':'inherit'}">${num(x.available)}</td>
+      <td class="r num">${x.avgDaily}</td><td class="r num">${x.lead}d</td><td class="r num">${num(x.safety)}</td>
+      <td class="r qty">${num(x.rop)}</td>
+      <td class="r"><span class="tag ${x.dz<x.it.lead?'t-crit':x.dz<x.it.lead*2?'t-warn':'t-neutral'}">${x.dz===Infinity?'—':x.dz+'d'}</span></td>
+      <td class="r qty">${num(x.suggest)}</td><td class="r num">${money(x.suggest*x.it.cost).replace('QAR ','')}</td>
+      <td class="noprint"><button class="btn sm" onclick="event.stopPropagation();raisePR('${x.it.id}')">Raise PR</button></td></tr>`).join('')}
+  </tbody></table></div>
+  <div class="pad"><div class="why">Reorder point = average daily usage × supplier lead time + safety stock. Safety stock is set at half of lead-time demand. Suggested quantity brings stock back to 1.6 × the reorder point, floored at the item's standard order quantity.</div>
+  <button class="btn ghost sm noprint" style="margin-top:10px" onclick="csv('reorder-${wh}.csv',[['SKU','Item','Available','Avg daily','Lead days','Safety','Reorder point','Days cover','Suggested qty','Est. value','Supplier']].concat(window._rl))">${esc(L('Export CSV'))}</button></div></div>`;
+}
+function iForecast(wh){
+  const list=itemsIn(wh).map(i=>({i, ad:avgDaily(i.id,wh), av:available(i.id,wh), dz:daysToZero(i,wh)}))
+    .filter(x=>x.ad>0).sort((a,b)=>a.dz-b.dz).slice(0,14);
+  const proj=(x,d)=>Math.max(0,Math.round(x.av-x.ad*d));
+  return `<div class="note" style="margin-bottom:14px">Projections use 90 days of issue history and assume consumption continues at the same rate. Seasonality, new project mobilisations and one-off issues are not yet modelled — treat the dates as a warning window, not a promise.</div>
+  <div class="panel"><div class="t-scroll"><table><thead><tr>
+    <th>${esc(L('Item'))}</th><th class="r">Now</th><th class="r">Avg/day</th><th class="r">+7d</th><th class="r">+14d</th><th class="r">+30d</th>
+    <th class="r">Reaches zero</th><th>Recommendation</th></tr></thead><tbody>
+    ${list.map(x=>{const r=reorderPoint(x.i,wh);
+      return `<tr class="clk" onclick="showItem('${x.i.id}')"><td>${esc(iname(x.i))}<div class="xs mono dim">${esc(x.i.sku)}</div></td>
+      <td class="r qty">${num(x.av)}</td><td class="r num">${x.ad}</td>
+      <td class="r num ${proj(x,7)<=0?'':''}" style="${proj(x,7)<=0?'color:var(--crit);font-weight:600':''}">${num(proj(x,7))}</td>
+      <td class="r num" style="${proj(x,14)<=0?'color:var(--crit);font-weight:600':''}">${num(proj(x,14))}</td>
+      <td class="r num" style="${proj(x,30)<=0?'color:var(--crit);font-weight:600':''}">${num(proj(x,30))}</td>
+      <td class="r"><span class="tag ${x.dz<x.i.lead?'t-crit':x.dz<30?'t-warn':'t-ok'}">${x.dz===Infinity?'—':'~'+x.dz+' days'}</span></td>
+      <td class="xs">${x.dz<x.i.lead*1.5? `Order ${num(Math.max(x.i.reorderQty,Math.ceil(r.rop*1.6-x.av)))} ${esc(x.i.uom)} now — supplier needs ${x.i.lead} days.` : 'No action needed yet.'}</td></tr>`;}).join('')}
+  </tbody></table></div></div>`;
+}
+function iDead(wh){
+  const ds=deadStock(wh);
+  if(!ds.length) return `<div class="panel empty"><h4>No dead stock</h4><p>Every SKU has moved within the last ${DB.settings.deadDays} days.</p></div>`;
+  const bands=[30,60,90,180,365];
+  return `<div class="grid g3" style="margin-bottom:14px">
+    ${kpi('Money trapped in inventory',money(ds.reduce((s,d)=>s+d.value,0)),`${ds.length} SKUs not moving`,'dead')}
+    ${kpi('Oldest',ds.reduce((m,d)=>Math.max(m,d.idle),0)+' days','since last movement','warn')}
+    ${kpi('Share of inventory value',(ds.reduce((s,d)=>s+d.value,0)/(inventoryValue(wh)||1)*100).toFixed(1)+'%','of total stock value','over')}</div>
+  <div class="panel pad" style="margin-bottom:14px"><h4 style="margin-bottom:10px">Ageing</h4>
+    ${bars(bands.map(b=>{const l=itemsIn(wh).filter(i=>onHand(i.id,wh)>0&&idleDays(i.id)>=b);
+      return {l:b+'+ days', v:l.length, t:l.length+' SKUs · '+money(l.reduce((s,i)=>s+valueOf(i,wh),0)), c:'var(--dead)'};}))}</div>
+  <div class="panel"><div class="t-scroll"><table><thead><tr>
+    <th>${esc(L('Item'))}</th><th class="r">Idle days</th><th class="r">${esc(L('Quantity'))}</th><th class="r">${esc(L('Value'))}</th><th>Recommended action</th></tr></thead><tbody>
+    ${ds.map(d=>{
+      const other=DB.warehouses.find(w=>w.id!==wh&&available(d.it.id,w.id)<=d.it.reorder);
+      const act = d.it.expiryControlled? 'Use or dispose before expiry' : other? `Transfer to ${wname(other)} — that store is short of it`
+        : d.value>3000? 'Return to supplier or negotiate buy-back' : d.idle>240? 'Write off after inspection' : 'Reuse on the next project mobilisation';
+      return `<tr class="clk" onclick="showItem('${d.it.id}')"><td>${esc(iname(d.it))}<div class="xs mono dim">${esc(d.it.sku)}</div></td>
+      <td class="r num">${d.idle>900?'never moved':d.idle}</td><td class="r qty">${num(d.qty)}</td>
+      <td class="r num">${money(d.value).replace('QAR ','')}</td><td class="xs">${esc(act)}</td></tr>`;}).join('')}
+  </tbody></table></div></div>`;
+}
+function iExpiry(wh){
+  const all=expiringBatches(wh,90);
+  const band=d=>all.filter(x=>x.days<=d&&x.days>(d===0?-99999:[0,7,30,60].filter(b=>b<d).pop()??-99999));
+  const expired=all.filter(x=>x.days<0), d7=all.filter(x=>x.days>=0&&x.days<=7), d30=all.filter(x=>x.days>7&&x.days<=30),
+        d60=all.filter(x=>x.days>30&&x.days<=60), d90=all.filter(x=>x.days>60&&x.days<=90);
+  if(!all.length) return `<div class="panel empty"><h4>No batch expires within 90 days</h4><p>FEFO is active — the issue screen always offers the earliest-expiry batch first.</p></div>`;
+  return `<div class="grid g4" style="margin-bottom:14px">
+    ${kpi('Expired',expired.length,money(expired.reduce((s,x)=>s+x.value,0)),'crit')}
+    ${kpi('Within 7 days',d7.length,money(d7.reduce((s,x)=>s+x.value,0)),'crit')}
+    ${kpi('Within 30 days',d30.length,money(d30.reduce((s,x)=>s+x.value,0)),'warn')}
+    ${kpi('Within 90 days',(d60.length+d90.length),money([...d60,...d90].reduce((s,x)=>s+x.value,0)),'teal')}</div>
+  <div class="panel"><div class="t-scroll"><table><thead><tr>
+    <th>${esc(L('Item'))}</th><th>${esc(L('Batch'))}</th><th>${esc(L('Expiry'))}</th><th class="r">Days</th>
+    <th class="r">${esc(L('Quantity'))}</th><th class="r">${esc(L('Value'))}</th><th>Action</th></tr></thead><tbody>
+    ${all.map(x=>`<tr class="clk" onclick="showItem('${x.item.id}')">
+      <td>${esc(iname(x.item))}<div class="xs mono dim">${esc(x.item.sku)}</div></td>
+      <td class="mono xs">${esc(x.batch)}</td><td class="mono xs">${esc(x.expiry)}</td>
+      <td class="r"><span class="tag ${x.days<0?'t-crit':x.days<=7?'t-crit':x.days<=30?'t-warn':'t-neutral'}">${x.days<0?'expired':x.days+'d'}</span></td>
+      <td class="r qty">${num(x.qty)}</td><td class="r num">${money(x.value).replace('QAR ','')}</td>
+      <td class="xs">${x.days<0?'Quarantine and raise a disposal adjustment':x.days<=7?'Issue immediately or return to supplier':'Issue first under FEFO'}</td></tr>`).join('')}
+  </tbody></table></div><div class="pad"><div class="why">FEFO is enforced on the issue screen: if a storekeeper selects a later batch while an earlier-expiry batch is in stock, the system warns before the transaction posts.</div></div></div>`;
+}
+function iABC(wh){
+  const list=abcxyz(wh);
+  const cls={};['A','B','C'].forEach(a=>['X','Y','Z'].forEach(x=>cls[a+x]=list.filter(l=>l.cls===a+x)));
+  const advice={AX:'Tight control, frequent review, never stock out',AY:'Buffer stock, watch demand swings',AZ:'High value, unpredictable — buy to order',
+    BX:'Standard reorder rules work well',BY:'Periodic review, moderate safety stock',BZ:'Review before each purchase',
+    CX:'Bulk buy, low review frequency',CY:'Bulk buy, tolerate variability',CZ:'Minimum attention — candidate for rationalisation'};
+  return `<div class="note" style="margin-bottom:14px">ABC ranks SKUs by annualised consumption value (A = top 80% of spend). XYZ ranks demand predictability from 3 months of issue history (X = steady, Z = erratic).</div>
+  <div class="abc" style="margin-bottom:14px">
+    <div class="hd"></div><div class="hd">X — steady</div><div class="hd">Y — variable</div><div class="hd">Z — erratic</div>
+    ${['A','B','C'].map(a=>`<div class="hd">${a}</div>`+['X','Y','Z'].map(x=>{const c=cls[a+x];
+      return `<div><div class="cnt">${c.length}</div><div class="xs muted">${money(c.reduce((s,l)=>s+l.value,0)).replace('QAR ','QAR ')}</div>
+      <div class="xs dim" style="margin-top:4px">${esc(advice[a+x])}</div></div>`;}).join('')).join('')}
+  </div>
+  <div class="panel"><div class="t-scroll"><table><thead><tr><th>Class</th><th>${esc(L('Item'))}</th><th class="r">Annualised value</th>
+    <th class="r">Demand CV</th><th class="r">${esc(L('On hand'))}</th><th>Guidance</th></tr></thead><tbody>
+    ${list.slice(0,25).map(l=>`<tr class="clk" onclick="showItem('${l.i.id}')">
+      <td><span class="tag ${l.abc==='A'?'t-crit':l.abc==='B'?'t-warn':'t-neutral'}">${esc(l.cls)}</span></td>
+      <td>${esc(iname(l.i))}<div class="xs mono dim">${esc(l.i.sku)}</div></td>
+      <td class="r num">${money(l.value).replace('QAR ','')}</td><td class="r num">${l.cv.toFixed(2)}</td>
+      <td class="r qty">${num(onHand(l.i.id,wh))}</td><td class="xs">${esc(advice[l.cls])}</td></tr>`).join('')}
+  </tbody></table></div></div>`;
+}
+function iRisk(wh){
+  const list=itemsIn(wh).map(i=>({i,r:riskScore(i,wh)})).filter(x=>x.r.score>0).sort((a,b)=>b.r.score-a.r.score).slice(0,20);
+  if(!list.length) return `<div class="panel empty"><h4>No SKU carries a supply risk today</h4><p>Cover, lead time and reorder levels are all inside tolerance.</p></div>`;
+  return `<div class="grid g3" style="margin-bottom:14px">
+    ${kpi('High risk',list.filter(x=>x.r.band==='HIGH').length,'score 70+','crit')}
+    ${kpi('Medium risk',list.filter(x=>x.r.band==='MEDIUM').length,'score 40–69','warn')}
+    ${kpi('Exposure',money(list.filter(x=>x.r.band!=='LOW').reduce((s,x)=>s+x.i.cost*x.i.min,0)),'cost of covering minimum levels','teal')}</div>
+  ${list.map(x=>`<div class="panel pad" style="margin-bottom:10px;border-inline-start:3px solid ${x.r.band==='HIGH'?'var(--crit)':x.r.band==='MEDIUM'?'var(--amber)':'var(--ok)'}">
+    <div class="between"><div><h4>${esc(iname(x.i))} <span class="mono xs dim">${esc(x.i.sku)}</span></h4>
+      <div class="sm muted">${esc(DB.suppliers.find(s=>s.id===x.i.supplier).name)} · lead ${x.i.lead} days</div></div>
+      <span class="tag ${x.r.band==='HIGH'?'t-crit':x.r.band==='MEDIUM'?'t-warn':'t-ok'}">${x.r.score}/100 · ${x.r.band}</span></div>
+    <ul class="sm muted" style="margin:8px 0 0;padding-inline-start:18px">${x.r.factors.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>
+    <div class="row tight noprint" style="margin-top:10px"><button class="btn sm ghost" onclick="showItem('${x.i.id}')">Open item</button>
+      <button class="btn sm" onclick="raisePR('${x.i.id}')">Raise purchase request</button></div></div>`).join('')}`;
+}
+function iAnom(wh){
+  const list=anomalies(wh);
+  if(!list.length) return `<div class="panel empty"><h4>No unusual activity detected</h4><p>Consumption, adjustments and transaction timing are all within normal patterns.</p></div>`;
+  return `<div class="note" style="margin-bottom:14px">These are deviations from the warehouse's own history. Treat each one as a question to ask, not as a finding.</div>
+  ${list.map(a=>`<div class="panel pad ${a.sev==='crit'?'':''}" style="margin-bottom:10px;border-inline-start:3px solid ${a.sev==='crit'?'var(--crit)':'var(--amber)'}">
+    <strong>⚠ ${esc(a.title)}</strong><div class="why">${esc(a.why)}</div></div>`).join('')}`;
+}
+function iTom(wh){
+  const t=tomorrow(wh);
+  return `<div class="panel pad" style="background:var(--ink);color:#EAEFED;border:0;margin-bottom:14px">
+    <h2 style="color:#fff">${DB.settings.lang==='ar'?'توقعات الغد':'Tomorrow\'s risk forecast'}</h2>
+    <p class="sm" style="color:#8B9793;margin:6px 0 0">${esc(whLabel())} · generated ${new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</p></div>
+  ${t.lines.length? t.lines.map((l,ix)=>`<div class="panel pad" style="margin-bottom:10px">
+    <div class="between"><strong>${esc(l.t)}</strong><span class="tag t-neutral mono">${ix+1}</span></div>
+    <div class="why">${esc(l.d)}</div></div>`).join('')
+    : `<div class="panel empty"><h4>No threshold is forecast to break</h4><p>Nothing in the next seven days needs a decision today.</p></div>`}
+  <div class="note teal" style="margin-top:14px">Forecasts are calculated from this warehouse's own transaction history. They will improve as more months of data accumulate, and they are never treated as certainties by the reorder or approval logic.</div>`;
+}
+
+/* ==========================================================================
+   Layer 10: suppliers, reports, ask, audit, settings
+   ========================================================================== */
+VIEWS.sup = function(){
+  const sups=DB.suppliers.map(s=>({s, sc:supplierScore(s)})).sort((a,b)=>b.sc.score-a.sc.score);
+  return pageHdr('Suppliers', DB.settings.lang==='ar'?'أداء الموردين محسوب من سجل الاستلام والمرتجعات':'Performance is calculated from receipt history, returns and lead time — not entered by hand.') + `
+  <div class="panel" style="margin-bottom:14px"><div class="t-scroll"><table><thead><tr>
+    <th>${esc(L('Supplier'))}</th><th>Contact</th><th class="r">Items</th><th class="r">Receipts</th><th class="r">Returns</th>
+    <th class="r">On time</th><th class="r">Quality</th><th class="r">Lead</th><th class="r">Score</th></tr></thead><tbody>
+    ${sups.map(x=>`<tr class="clk" onclick="showSupplier('${x.s.id}')">
+      <td>${esc(x.s.name)}<div class="xs dim">${esc(x.s.terms)}</div></td>
+      <td class="xs">${esc(x.s.contact)}<div class="xs dim mono">${esc(x.s.phone)}</div></td>
+      <td class="r num">${x.sc.items}</td><td class="r num">${x.sc.receipts}</td><td class="r num">${x.sc.returns}</td>
+      <td class="r num">${x.sc.onTime}%</td><td class="r num">${x.sc.quality}%</td><td class="r num">${x.s.lead}d</td>
+      <td class="r"><span class="tag ${x.sc.band==='Preferred'?'t-ok':x.sc.band==='Approved'?'t-warn':'t-crit'}">${x.sc.score} · ${esc(x.sc.band)}</span></td></tr>`).join('')}
+  </tbody></table></div></div>
+  <div class="panel pad">
+    <h3 style="margin-bottom:10px">${DB.settings.lang==='ar'?'توصية المورد':'Supplier recommendation'}</h3>
+    ${(function(){ const rl=reorderList(UI.wh).slice(0,4);
+      if(!rl.length) return '<p class="sm muted">Nothing needs purchasing today.</p>';
+      return rl.map(x=>{ const cur=DB.suppliers.find(s=>s.id===x.it.supplier);
+        const alt=DB.suppliers.filter(s=>s.id!==cur.id).map(s=>({s,sc:supplierScore(s)})).sort((a,b)=>b.sc.score-a.sc.score)[0];
+        const better = alt.sc.score>supplierScore(cur).score+6;
+        return `<div class="note ${better?'':'teal'}" style="margin-bottom:8px"><strong>${esc(iname(x.it))} — ${num(x.suggest)} ${esc(x.it.uom)}</strong>
+        <div class="why">${better? `Recommended: ${esc(alt.s.name)}. Performance score ${alt.sc.score} against ${supplierScore(cur).score} for the current supplier, and a ${cur.lead-alt.s.lead>0?(cur.lead-alt.s.lead)+'-day shorter':'comparable'} lead time. Confirm pricing before switching.`
+          : `Stay with ${esc(cur.name)}. No alternative supplier scores materially higher on delivery or quality.`}</div></div>`;}).join(''); })()}
+  </div>`;
+};
+function showSupplier(id){
+  const s=DB.suppliers.find(x=>x.id===id), sc=supplierScore(s);
+  const its=DB.items.filter(i=>i.supplier===id);
+  UI.openDrawer(s.name, `
+    <div class="grid g3" style="margin-bottom:12px">${kpi('Performance',sc.score+'/100',sc.band,'teal')}
+      ${kpi('Lead time',s.lead+'d','contracted')}${kpi('Catalogue',its.length,'SKUs supplied')}</div>
+    ${bars([{l:'On-time delivery',v:sc.onTime,t:sc.onTime+'%'},{l:'Quality / return rate',v:sc.quality,t:sc.quality+'%'},{l:'Price index',v:sc.priceIdx,t:sc.priceIdx}])}
+    <hr class="sep">
+    <table style="margin-bottom:12px"><tbody>
+      <tr><td class="muted">Contact</td><td class="r">${esc(s.contact)}</td></tr>
+      <tr><td class="muted">Phone</td><td class="r mono">${esc(s.phone)}</td></tr>
+      <tr><td class="muted">Email</td><td class="r">${esc(s.email)}</td></tr>
+      <tr><td class="muted">Payment terms</td><td class="r">${esc(s.terms)}</td></tr>
+    </tbody></table>
+    <div class="panel pad"><h4 style="margin-bottom:8px">Items supplied</h4>
+      <table><tbody>${its.map(i=>`<tr class="clk" onclick="showItem('${i.id}')"><td>${esc(iname(i))}</td>
+        <td class="r qty">${num(onHand(i.id,UI.wh))}</td><td class="r">${tag(statusOf(i,UI.wh))}</td></tr>`).join('')}</tbody></table></div>`);
+}
+
+/* ---------------- reports ---------------- */
+const REPORTS=[
+  ['daily','Daily warehouse report'],['balance','Stock balance'],['movement','Stock movement'],['valuation','Stock valuation'],
+  ['low','Low stock'],['dead','Dead stock'],['expiry','Expiry'],['variance','Stock variance & accuracy'],
+  ['purchase','Purchase requirement'],['supplier','Supplier performance'],['consumption','Department & project consumption'],
+  ['util','Warehouse utilisation'],['activity','User activity']
+];
+VIEWS.rep = function(){
+  const r=UI.tab.rep||'daily', wh=UI.wh;
+  return pageHdr('Reports', DB.settings.lang==='ar'?'كل تقرير قابل للطباعة والتصدير':'Every report prints clean and exports to CSV.',
+    `<button class="btn ghost sm" onclick="window.print()">${esc(L('Print'))}</button>`) + `
+  <div class="tabs">${REPORTS.map(([k,l])=>`<button class="tab ${r===k?'on':''}" onclick="UI.tab.rep='${k}';UI.render()">${esc(l)}</button>`).join('')}</div>
+  ${REP[r](wh)}`;
+};
+function repTable(title, head, rows, fileBase){
+  return `<div class="panel">
+    <div class="pad between" style="border-bottom:1px solid var(--line)">
+      <div><h3>${esc(title)}</h3><div class="sm muted">${esc(whLabel())} · ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'})} · ${rows.length} lines</div></div>
+      <button class="btn ghost sm noprint" onclick="csvFrom('${fileBase}')">${esc(L('Export CSV'))}</button>
+    </div>
+    ${rows.length?`<div class="t-scroll"><table><thead><tr>${head.map((h,i)=>`<th class="${i>1?'r':''}">${esc(h)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td class="${i>1?'r':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+    :`<div class="empty"><h4>Nothing to report</h4><p>No records match this report for ${esc(whLabel())}.</p></div>`}
+  </div>`;
+}
+let _repCache={head:[],rows:[],name:'report'};
+function cache(name,head,rows){ _repCache={name,head,rows:rows.map(r=>r.map(c=>String(c).replace(/<[^>]+>/g,'')))}; return rows; }
+function csvFrom(){ csv(_repCache.name+'-'+dstr(Date.now())+'.csv',[_repCache.head].concat(_repCache.rows)); }
+const REP={};
+REP.daily=wh=>{ const d=dailyLedger(wh), h=healthScore(wh), items=itemsIn(wh), ds=deadStock(wh);
+  const top=DB.items.map(i=>({i,v:issuesIn(i.id,1,wh)})).sort((a,b)=>b.v-a.v)[0];
+  const lastCount=DB.counts.filter(c=>wh==='*'||c.wh===wh).slice(-1)[0];
+  return `<div class="panel pad">
+    <div class="between" style="margin-bottom:14px"><div><h2>Daily warehouse executive report</h2>
+      <div class="sm muted">${esc(DB.settings.company)} · ${esc(whLabel())} · ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'})}</div></div>
+      <span class="tag t-teal">Auto-generated ${esc(DB.settings.reportTime)} daily</span></div>
+    <table><tbody>
+      <tr><td>Opening stock</td><td class="r qty">${num(d.opening)}</td></tr>
+      <tr><td>Received</td><td class="r qty">${num(d.receipts)}</td></tr>
+      <tr><td>Issued</td><td class="r qty">${num(d.issues)}</td></tr>
+      <tr><td>Returned from site</td><td class="r qty">${num(d.returnsIn)}</td></tr>
+      <tr><td>Transfers in / out</td><td class="r qty">${num(d.transferIn)} / ${num(d.transferOut)}</td></tr>
+      <tr><td>Adjustments</td><td class="r qty">${d.adjustments>0?'+':''}${num(d.adjustments)}</td></tr>
+      <tr style="background:var(--panel-2)"><td><strong>Closing stock</strong></td><td class="r qty"><strong>${num(d.closing)}</strong></td></tr>
+      <tr><td>Low-stock SKUs</td><td class="r qty">${items.filter(i=>statusOf(i,wh)==='warn').length}</td></tr>
+      <tr><td>Out-of-stock SKUs</td><td class="r qty">${items.filter(i=>onHand(i.id,wh)<=0).length}</td></tr>
+      <tr><td>Expired batches</td><td class="r qty">${expiringBatches(wh,0).length}</td></tr>
+      <tr><td>Dead-stock value</td><td class="r">${money(ds.reduce((s,x)=>s+x.value,0))}</td></tr>
+      <tr><td>Inventory value</td><td class="r">${money(inventoryValue(wh))}</td></tr>
+      <tr><td>Inventory accuracy</td><td class="r qty">${countAccuracy(wh).toFixed(1)}%${lastCount?` <span class="xs dim">(${lastCount.id})</span>`:''}</td></tr>
+      <tr><td>Warehouse health</td><td class="r qty">${h.score}/100 — ${esc(h.band)}</td></tr>
+      <tr><td>Top consumed today</td><td class="r">${top&&top.v?esc(iname(top.i))+' · '+num(top.v):'—'}</td></tr>
+      <tr><td>Purchase recommendations</td><td class="r qty">${reorderList(wh).length}</td></tr>
+    </tbody></table>
+    <div class="note" style="margin-top:14px"><strong>Critical action required</strong>
+      <div class="why">${esc(tomorrow(wh).lines.map(l=>l.t).slice(0,2).join(' · ')||'None — no threshold is currently breached.')}</div></div>
+    <div class="sm muted noprint" style="margin-top:12px">This report is scheduled to email to the warehouse manager, operations manager and finance at ${esc(DB.settings.reportTime)} every day. Recipients and time are set in Settings.</div>
+  </div>`;
+};
+REP.balance=wh=>repTable('Stock balance',['Item','SKU','On hand','Reserved','Available','Min','Max','Value'],
+  cache('stock-balance',['Item','SKU','On hand','Reserved','Available','Min','Max','Value'],
+  itemsIn(wh).map(i=>[esc(iname(i)),`<span class="mono xs">${esc(i.sku)}</span>`,num(onHand(i.id,wh)),num(reserved(i.id,wh)),num(available(i.id,wh)),num(i.min),num(i.max),money(Math.max(0,valueOf(i,wh))).replace('QAR ','')])),'stock-balance');
+REP.movement=wh=>{const list=DB.txns.filter(t=>!t.reversed&&t.ts>Date.now()-30*DAY&&(wh==='*'||t.wh===wh)).sort((a,b)=>b.ts-a.ts).slice(0,120);
+  return repTable('Stock movement — last 30 days',['Date','Type','Item','Qty','Location','Reference','User'],
+  cache('stock-movement',['Date','Type','Item','Qty','Location','Reference','User'],
+  list.map(t=>[dstr(t.ts),t.type,esc(iname(ITEM(t.itemId)||{name:t.itemId,nameAr:''})),(t.qty>0?'+':'')+t.qty,`<span class="mono xs">${esc(t.locId)}</span>`,`<span class="mono xs">${esc(t.ref)}</span>`,esc(t.user)])),'stock-movement');};
+REP.valuation=wh=>{const rows=DB.categories.map(c=>{const its=itemsIn(wh).filter(i=>i.cat===c);
+  const val=its.reduce((s,i)=>s+Math.max(0,valueOf(i,wh)),0);
+  const dead=its.filter(i=>statusOf(i,wh)==='dead').reduce((s,i)=>s+valueOf(i,wh),0);
+  return [esc(c),its.length,num(its.reduce((s,i)=>s+onHand(i.id,wh),0)),money(val).replace('QAR ',''),money(dead).replace('QAR ',''),((val/(inventoryValue(wh)||1))*100).toFixed(1)+'%'];});
+  return repTable('Stock valuation by category',['Category','SKUs','Units','Value','Of which idle','Share'],
+    cache('stock-valuation',['Category','SKUs','Units','Value','Idle value','Share'],rows),'stock-valuation');};
+REP.low=wh=>repTable('Low stock',['Item','SKU','Available','Reorder point','Days cover','Supplier','Suggested order'],
+  cache('low-stock',['Item','SKU','Available','Reorder point','Days cover','Supplier','Suggested order'],
+  reorderList(wh).map(x=>[esc(iname(x.it)),`<span class="mono xs">${esc(x.it.sku)}</span>`,num(x.available),num(x.rop),x.dz===Infinity?'—':x.dz,esc(DB.suppliers.find(s=>s.id===x.it.supplier).name),num(x.suggest)])),'low-stock');
+REP.dead=wh=>repTable('Dead stock',['Item','SKU','Idle days','Quantity','Value'],
+  cache('dead-stock',['Item','SKU','Idle days','Quantity','Value'],
+  deadStock(wh).map(d=>[esc(iname(d.it)),`<span class="mono xs">${esc(d.it.sku)}</span>`,d.idle>900?'never moved':d.idle,num(d.qty),money(d.value).replace('QAR ','')])),'dead-stock');
+REP.expiry=wh=>repTable('Expiry',['Item','Batch','Expiry','Days','Quantity','Value'],
+  cache('expiry',['Item','Batch','Expiry','Days','Quantity','Value'],
+  expiringBatches(wh,120).map(x=>[esc(iname(x.item)),`<span class="mono xs">${esc(x.batch)}</span>`,x.expiry,x.days,num(x.qty),money(x.value).replace('QAR ','')])),'expiry');
+REP.variance=wh=>{const rows=[];
+  DB.counts.filter(c=>wh==='*'||c.wh===wh).forEach(c=>c.lines.filter(l=>l.variance).forEach(l=>
+    rows.push([c.id,dstr(c.ts),esc(iname(ITEM(l.itemId))),l.system,l.physical,(l.variance>0?'+':'')+l.variance,esc(l.note)])));
+  return `<div class="grid g3" style="margin-bottom:14px">
+    ${kpi('Inventory accuracy',countAccuracy(wh).toFixed(1)+'%','matched lines across closed counts',countAccuracy(wh)>=98?'ok':'warn')}
+    ${kpi('Counts closed',DB.counts.filter(c=>wh==='*'||c.wh===wh).length,'')}
+    ${kpi('Variance lines',rows.length,'require explanation','warn')}</div>`+
+  repTable('Stock variance',['Count','Date','Item','System','Physical','Variance','Explanation'],
+    cache('stock-variance',['Count','Date','Item','System','Physical','Variance','Explanation'],rows),'stock-variance');};
+REP.purchase=wh=>repTable('Purchase requirement',['Item','SKU','Suggested qty','Unit cost','Estimated value','Supplier','Lead time'],
+  cache('purchase-requirement',['Item','SKU','Suggested qty','Unit cost','Estimated value','Supplier','Lead days'],
+  reorderList(wh).map(x=>[esc(iname(x.it)),`<span class="mono xs">${esc(x.it.sku)}</span>`,num(x.suggest),money2(x.it.cost).replace('QAR ',''),money(x.suggest*x.it.cost).replace('QAR ',''),esc(DB.suppliers.find(s=>s.id===x.it.supplier).name),x.it.lead])),'purchase-requirement');
+REP.supplier=()=>repTable('Supplier performance',['Supplier','Items','Receipts','Returns','On time','Quality','Score'],
+  cache('supplier-performance',['Supplier','Items','Receipts','Returns','On time %','Quality %','Score'],
+  DB.suppliers.map(s=>{const sc=supplierScore(s);return [esc(s.name),sc.items,sc.receipts,sc.returns,sc.onTime,sc.quality,sc.score+' ('+sc.band+')'];})),'supplier-performance');
+REP.consumption=wh=>{const rows=[];
+  [...DB.projects.map(p=>['Project',p.name]),...DB.departments.map(d=>['Department',d.name])].forEach(([type,name])=>{
+    const ts=DB.txns.filter(t=>!t.reversed&&t.type==='Issue'&&t.ts>Date.now()-90*DAY&&(wh==='*'||t.wh===wh)&&(t.party===name||t.note===name));
+    if(!ts.length) return;
+    const units=ts.reduce((s,t)=>s-t.qty,0);
+    const val=ts.reduce((s,t)=>s-t.qty*(ITEM(t.itemId)||{cost:0}).cost,0);
+    const top=Object.entries(ts.reduce((m,t)=>{m[t.itemId]=(m[t.itemId]||0)-t.qty;return m;},{})).sort((a,b)=>b[1]-a[1])[0];
+    rows.push([type,esc(name),ts.length,num(units),money(val).replace('QAR ',''),esc(iname(ITEM(top[0])))]);});
+  return repTable('Department & project consumption — 90 days',['Type','Name','Transactions','Units','Value','Top item'],
+    cache('consumption',['Type','Name','Transactions','Units','Value','Top item'],rows),'consumption');};
+REP.util=wh=>{const rows=(wh==='*'?DB.warehouses.map(w=>w.id):[wh]).flatMap(w=>rackUtil(w).map(r=>
+  [w,`${r.zone} / ${r.rack}`,num(r.cap),num(r.used),(r.cap?r.used/r.cap*100:0).toFixed(0)+'%',r.used/r.cap>0.92?'Full':r.used/r.cap>0.75?'Near full':r.used/r.cap<0.3?'Space available':'Healthy']));
+  return repTable('Warehouse utilisation',['Warehouse','Location','Capacity','Occupied','Utilisation','Status'],
+    cache('warehouse-utilisation',['Warehouse','Location','Capacity','Occupied','Utilisation','Status'],rows),'warehouse-utilisation');};
+REP.activity=wh=>{const rows=DB.users.map(u=>{
+  const ts=DB.txns.filter(t=>!t.reversed&&t.user===u.name&&(wh==='*'||t.wh===wh));
+  return [esc(u.name),esc(u.role),ts.length,ts.filter(t=>t.type==='Receive').length,ts.filter(t=>t.type==='Issue').length,
+    ts.filter(t=>t.type==='Adjust').length, ts.length?dstr(Math.max(...ts.map(t=>t.ts))):'—'];}).filter(r=>r[2]>0);
+  return repTable('User activity',['User','Role','Transactions','Receipts','Issues','Adjustments','Last activity'],
+    cache('user-activity',['User','Role','Transactions','Receipts','Issues','Adjustments','Last activity'],rows),'user-activity');};
+
+/* ==========================================================================
+   Layer 11: Ask the warehouse — natural language over authorised data only.
+   The parser maps a question to a whitelisted query function. No free-form
+   query string is ever built or executed.
+   ========================================================================== */
+let CHAT=[];
+const SUGGEST=['What should I reorder today?','Which items have not moved for 90 days?','How many safety helmets do we have?',
+  'What did we issue today?','Show me items expiring this month','What are our five most expensive items?',
+  'Which warehouse has excess stock?','What did Project Alpha consume last month?'];
+VIEWS.ask = function(){
+  return pageHdr('Ask the warehouse', DB.settings.lang==='ar'?'اسأل بلغتك. الإجابات من بيانات مستودعك فقط.':'Ask in plain language. Answers come only from your own warehouse data, filtered to what your role is allowed to see.') + `
+  <div class="panel pad" style="max-width:820px">
+    <div class="chat" id="chat">${CHAT.length?CHAT.map(m=>`<div class="msg ${m.r}">${m.r==='u'?esc(m.t):m.t}</div>`).join('')
+      :`<div class="msg a">Ask me about stock levels, what moved, what to buy, what is expiring, or where something is stored. I answer from ${esc(whLabel())} only.</div>`}</div>
+    <div class="row tight" style="margin-top:12px">
+      <input class="f" id="askIn" style="flex:1" placeholder="${DB.settings.lang==='ar'?'اكتب سؤالك…':'Type your question…'}" onkeydown="if(event.key==='Enter')doAsk()">
+      <button class="btn ghost" onclick="askVoice()" title="Voice">🎤</button>
+      <button class="btn" onclick="doAsk()">Ask</button>
+    </div>
+    <div class="chips">${SUGGEST.map(s=>`<button class="chip" onclick="doAsk('${s.replace(/'/g,"\'")}')">${esc(s)}</button>`).join('')}</div>
+  </div>`;
+};
+AFTER.ask = ()=>{ const c=document.getElementById('chat'); if(c) c.scrollTop=c.scrollHeight; const i=document.getElementById('askIn'); if(i) i.focus(); };
+function askVoice(){
+  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR) return toast('This browser has no speech recognition. Type the question instead.',true);
+  const r=new SR(); r.lang = DB.settings.lang==='ar'?'ar-QA':'en-GB'; r.interimResults=false;
+  r.onresult=e=>{ document.getElementById('askIn').value=e.results[0][0].transcript; doAsk(); };
+  r.onerror=()=>toast('Could not hear that. Try again or type it.',true);
+  r.start(); toast('Listening…');
+}
+function doAsk(preset){
+  const q = preset || document.getElementById('askIn').value.trim();
+  if(!q) return;
+  CHAT.push({r:'u',t:q});
+  CHAT.push({r:'a',t:answer(q)});
+  if(!preset) document.getElementById('askIn').value='';
+  logAudit('Ask the warehouse','Query','',q,'');
+  UI.render();
+}
+function answer(qRaw){
+  const q=qRaw.toLowerCase(), wh=UI.wh;
+  const has=(...w)=>w.some(x=>q.includes(x));
+  const tbl=(head,rows)=>`<table style="margin-top:6px"><thead><tr>${head.map((h,i)=>`<th class="${i?'r':''}">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td class="${i?'r':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+
+  if(has('reorder','buy','purchase','order today','اشتري','طلب شراء')){
+    const rl=reorderList(wh).slice(0,8);
+    if(!rl.length) return 'Nothing is below its reorder point in '+esc(whLabel())+' today.';
+    return `${rl.length} item${rl.length>1?'s are':' is'} at or below the reorder point in ${esc(whLabel())}, an estimated ${money(rl.reduce((s,x)=>s+x.suggest*x.it.cost,0))} of purchasing.`+
+      tbl(['Item','Available','Reorder point','Suggested'],rl.map(x=>[esc(iname(x.it)),num(x.available),num(x.rop),num(x.suggest)]));
+  }
+  if(has('not moved','dead','idle','راكد','لم تتحرك')){
+    const ds=deadStock(wh).slice(0,8);
+    if(!ds.length) return 'Every item has moved within the last '+DB.settings.deadDays+' days.';
+    return `${ds.length} SKU${ds.length>1?'s have':' has'} not moved for ${DB.settings.deadDays}+ days, worth ${money(deadStock(wh).reduce((s,d)=>s+d.value,0))}.`+
+      tbl(['Item','Idle days','Qty','Value'],ds.map(d=>[esc(iname(d.it)),d.idle>900?'never':d.idle,num(d.qty),money(d.value).replace('QAR ','')]));
+  }
+  if(has('expir','انتهاء','صلاحية')){
+    const days = q.includes('week')?7:q.includes('month')?30:q.includes('today')?0:60;
+    const ex=expiringBatches(wh,days);
+    if(!ex.length) return `No batch expires within ${days} days in ${esc(whLabel())}.`;
+    return `${ex.length} batch${ex.length>1?'es':''} expire${ex.length>1?'':'s'} within ${days} days, worth ${money(ex.reduce((s,e)=>s+e.value,0))}. Issue these first under FEFO.`+
+      tbl(['Item','Batch','Expires','Qty'],ex.slice(0,8).map(e=>[esc(iname(e.item)),`<span class="mono xs">${esc(e.batch)}</span>`,e.expiry,num(e.qty)]));
+  }
+  if(has('issued today','issue today','what did we issue','صرفنا اليوم')){
+    const ts=DB.txns.filter(t=>!t.reversed&&t.type==='Issue'&&t.ts>=T0&&(wh==='*'||t.wh===wh));
+    if(!ts.length) return 'Nothing has been issued yet today.';
+    return `${ts.length} issue transaction${ts.length>1?'s':''} today totalling ${num(ts.reduce((s,t)=>s-t.qty,0))} units.`+
+      tbl(['Item','Qty','To'],ts.slice(0,10).map(t=>[esc(iname(ITEM(t.itemId))),num(-t.qty),esc(t.party)]));
+  }
+  if(has('below minimum','below min','low stock','running low','منخفض')){
+    const low=itemsIn(wh).filter(i=>['warn','crit'].includes(statusOf(i,wh)));
+    if(!low.length) return 'No item is below its minimum level.';
+    return `${low.length} item${low.length>1?'s are':' is'} at or below reorder level in ${esc(whLabel())}.`+
+      tbl(['Item','Available','Minimum'],low.slice(0,10).map(i=>[esc(iname(i)),num(available(i.id,wh)),num(i.min)]));
+  }
+  if(has('most expensive','highest value','expensive','أغلى')){
+    const top=itemsIn(wh).map(i=>({i,v:valueOf(i,wh)})).sort((a,b)=>b.v-a.v).slice(0,5);
+    return `The five highest-value holdings in ${esc(whLabel())}:`+
+      tbl(['Item','Qty','Value'],top.map(x=>[esc(iname(x.i)),num(onHand(x.i.id,wh)),money(x.v).replace('QAR ','')]));
+  }
+  if(has('excess','surplus','which warehouse','فائض')){
+    const rows=[];
+    DB.warehouses.forEach(w=>{ itemsIn(w.id).filter(i=>onHand(i.id,w.id)>i.max).slice(0,3)
+      .forEach(i=>rows.push([esc(wname(w)),esc(iname(i)),num(onHand(i.id,w.id)),num(i.max)])); });
+    if(!rows.length) return 'No warehouse is holding stock above its maximum level.';
+    return `Stock above maximum level, by warehouse — these are transfer candidates before any new purchase:`+tbl(['Warehouse','Item','On hand','Maximum'],rows.slice(0,10));
+  }
+  if(has('consume','consumed','consumption','استهلك')){
+    const prj=DB.projects.find(p=>q.includes(p.name.toLowerCase().split(' ')[0]))||DB.projects[0];
+    const ts=DB.txns.filter(t=>!t.reversed&&t.type==='Issue'&&t.party===prj.name&&t.ts>Date.now()-30*DAY);
+    if(!ts.length) return `No issues are recorded against ${esc(prj.name)} in the last 30 days.`;
+    const byItem=Object.entries(ts.reduce((m,t)=>{m[t.itemId]=(m[t.itemId]||0)-t.qty;return m;},{})).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    return `${esc(prj.name)} consumed ${num(ts.reduce((s,t)=>s-t.qty,0))} units over ${ts.length} issues in the last 30 days, valued at ${money(ts.reduce((s,t)=>s-t.qty*ITEM(t.itemId).cost,0))}.`+
+      tbl(['Item','Units'],byItem.map(([id,v])=>[esc(iname(ITEM(id))),num(v)]));
+  }
+  if(has('value','worth','قيمة') && !has('item')){
+    const ds=deadStock(wh).reduce((s,d)=>s+d.value,0);
+    return `${esc(whLabel())} holds ${money(inventoryValue(wh))} of stock across ${itemsIn(wh).length} SKUs. ${money(ds)} of that is sitting in items that have not moved for ${DB.settings.deadDays}+ days.`;
+  }
+  if(has('health','صحة')){
+    const h=healthScore(wh);
+    return `Warehouse health is ${h.score}/100 — ${h.band}. ${esc(h.parts.slice().sort((a,b)=>a.v-b.v).slice(0,2).map(p=>p.why).join(' '))}`;
+  }
+  if(has('where','location','موقع','أين')){
+    const it=findItem(qRaw.replace(/where(\s+is)?|located|location|the|أين|موقع/gi,'').trim());
+    if(!it) return 'I could not match that to an item. Try the SKU or the exact item name.';
+    const ls=locsFor(it.id,wh);
+    if(!ls.length){
+      const other=DB.warehouses.filter(w=>onHand(it.id,w.id)>0);
+      return `${esc(iname(it))} has no stock in ${esc(whLabel())}.`+(other.length?` It is held in ${other.map(w=>esc(wname(w))+' ('+num(onHand(it.id,w.id))+' '+esc(it.uom)+')').join(', ')}. Switch warehouse in the header to see bin locations.`:'');
+    }
+    return `${esc(iname(it))} is stored at:`+tbl(['Location','Qty'],ls.map(l=>[`<span class="mono xs">${esc(l.loc)}</span>`,num(l.qty)]));
+  }
+  // "how many X do we have"
+  const m = qRaw.replace(/how many|do we have|كم لدينا|عدد|\?/gi,'').trim();
+  const it = m.length>2 ? findItem(m) : null;
+  if(it){
+    const oh=onHand(it.id,wh), rv=reserved(it.id,wh), ls=locsFor(it.id,wh)[0];
+    const elsewhere=DB.warehouses.filter(w=>w.id!==wh&&onHand(it.id,w.id)>0);
+    return `${esc(iname(it))} (${esc(it.sku)}): ${num(oh)} ${esc(it.uom)} on hand in ${esc(whLabel())}, ${num(rv)} reserved, ${num(oh-rv)} available.${ls?` Stored at <span class="mono xs">${esc(ls.loc)}</span>.`:''} Status: ${STATUS_LABEL[statusOf(it,wh)]}.`+
+      (oh<=0&&elsewhere.length?` Other stores hold it: ${elsewhere.map(w=>esc(wname(w))+' '+num(onHand(it.id,w.id))).join(', ')}.`:'');
+  }
+  return `I can answer questions about stock levels, locations, what moved, what to reorder, what is expiring, dead stock, consumption by project, and inventory value. I could not match that question to your data — try naming an item, a project, or ask "what should I reorder today?"`;
+}
+
+/* ---------------- audit trail ---------------- */
+VIEWS.audit = function(){
+  const list=DB.audit.slice().sort((a,b)=>b.ts-a.ts).slice(0,120);
+  return pageHdr('Audit trail', DB.settings.lang==='ar'?'كل إجراء مسجل. لا يمكن حذف الحركات.':'Every action is logged with user, time, old value and new value. Transactions are never deleted — corrections post as reversing entries.',
+    `<button class="btn ghost sm" onclick="csv('audit-trail.csv',[['Time','User','Action','Entity','Old','New','Reason','Device']].concat(window._au))">${esc(L('Export CSV'))}</button>`) + `
+  <div class="panel"><div class="t-scroll"><table><thead><tr>
+    <th>Time</th><th>User</th><th>Action</th><th>Entity</th><th class="r">Old</th><th class="r">New</th><th>Reason</th><th>Device</th></tr></thead><tbody>
+    ${list.map(a=>`<tr><td class="xs mono">${tstr(a.ts)}</td><td class="xs">${esc(a.user)}</td>
+      <td><span class="tag t-neutral">${esc(a.action)}</span></td><td class="xs mono">${esc(a.entity)}</td>
+      <td class="r qty dim">${esc(a.old)}</td><td class="r qty">${esc(a.neu)}</td>
+      <td class="xs">${esc(a.reason)}</td><td class="xs dim">${esc(a.device)}</td></tr>`).join('')}
+  </tbody></table></div></div>`;
+};
+
+/* ---------------- settings ---------------- */
+VIEWS.set = function(){
+  const s=DB.settings;
+  return pageHdr('Settings', DB.settings.lang==='ar'?'إعدادات الشركة والرقابة':'Company identity, control thresholds and regional configuration. Nothing here is hard-coded in the application.') + `
+  <div class="grid g2">
+    <div class="panel pad">
+      <h3 style="margin-bottom:12px">Company</h3>
+      <div class="field"><label class="f">Product name</label><input class="f" value="${esc(s.product)}" onchange="DB.settings.product=this.value;logAudit('Setting','Product name','','',this.value);UI.render()"></div>
+      <div class="field"><label class="f">Company</label><input class="f" value="${esc(s.company)}" onchange="DB.settings.company=this.value;UI.render()"></div>
+      <div class="field"><label class="f">Currency</label><input class="f" value="${esc(s.currency)}" disabled></div>
+      <div class="field"><label class="f">Tax rate (%)</label><input class="f num" type="number" value="${s.taxRate}" min="0" step="0.5" onchange="DB.settings.taxRate=+this.value;toast('Tax rate set to '+this.value+'%.')">
+        <div class="why" style="margin-top:6px">Set to 0 by default. Qatar VAT is not assumed — change this when it applies to your entity.</div></div>
+      <div class="field"><label class="f">Daily report time</label><input class="f" type="time" value="${esc(s.reportTime)}" onchange="DB.settings.reportTime=this.value;toast('Daily report scheduled for '+this.value+'.')"></div>
+    </div>
+    <div class="panel pad">
+      <h3 style="margin-bottom:12px">Stock control</h3>
+      <label class="sm" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:12px">
+        <input type="checkbox" ${s.allowNegative?'checked':''} onchange="DB.settings.allowNegative=this.checked;logAudit('Setting','Negative stock',!this.checked,this.checked,'');toast(this.checked?'Negative stock is now permitted.':'Negative stock is blocked.');UI.render()">
+        <span>Allow negative stock<div class="xs muted">Off by default. When off, an issue larger than available stock is rejected at the point of entry.</div></span></label>
+      <label class="sm" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:12px">
+        <input type="checkbox" ${s.fefo?'checked':''} onchange="DB.settings.fefo=this.checked;toast(this.checked?'FEFO warnings on.':'FEFO warnings off.')">
+        <span>Enforce FEFO warnings<div class="xs muted">Warns the storekeeper when a later-expiry batch is selected while an earlier one is in stock.</div></span></label>
+      <div class="field"><label class="f">Dead stock threshold (days)</label>
+        <input class="f num" type="number" value="${s.deadDays}" min="30" step="30" onchange="DB.settings.deadDays=+this.value;UI.render();toast('Dead stock threshold set to '+this.value+' days.')"></div>
+      <hr class="sep">
+      <h4 style="margin-bottom:8px">Adjustment approval thresholds</h4>
+      <table><tbody>${s.adjustThresholds.map((t,i)=>`<tr><td class="xs">${i===0?money(0):money(s.adjustThresholds[i-1].max)} – ${t.max===Infinity?'above':money(t.max)}</td>
+        <td class="r"><select class="f" style="max-width:190px" onchange="DB.settings.adjustThresholds[${i}].role=this.value;toast('Approval level updated.')">
+        ${Object.keys(DB.roles).map(r=>`<option ${t.role===r?'selected':''}>${esc(r)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table>
+    </div>
+  </div>
+  <div class="panel pad" style="margin-top:14px">
+    <h3 style="margin-bottom:10px">Roles and permissions</h3>
+    <div class="t-scroll"><table><thead><tr><th>Role</th><th>Screens</th></tr></thead><tbody>
+      ${Object.entries(DB.roles).map(([r,p])=>`<tr><td><strong>${esc(r)}</strong></td>
+        <td class="xs muted">${p[0]==='*'?'Full system access':p.map(k=>{const f=NAV.flatMap(g=>g.items).find(i=>i.k===k);return f?f.t:k;}).join(' · ')}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="why" style="margin-top:10px">Switch role from the selector in the header to see the system as that user sees it. Screens outside a role's permission set are not rendered in the navigation and are refused if reached directly.</div>
+  </div>
+  <div class="panel pad" style="margin-top:14px">
+    <h3 style="margin-bottom:10px">Data and recovery</h3>
+    <div class="row tight">
+      <button class="btn ghost sm" onclick="backup()">Download full backup (JSON)</button>
+      <button class="btn ghost sm" onclick="csv('ledger-full.csv',[['Txn','Time','Type','Item','SKU','Qty','Location','Warehouse','Batch','Expiry','Reference','Party','User','Reason']].concat(DB.txns.map(t=>[t.id,tstr(t.ts),t.type,(ITEM(t.itemId)||{}).name,(ITEM(t.itemId)||{}).sku,t.qty,t.locId,t.wh,t.batch,t.expiry,t.ref,t.party,t.user,t.reason])))">Export full ledger</button>
+    </div>
+    <div class="why" style="margin-top:10px">This prototype keeps data in the browser session. The production build writes to PostgreSQL with scheduled encrypted backups and a restore test, the same pattern as the MIZAN deployment.</div>
+  </div>`;
+};
+function backup(){
+  const blob=new Blob([JSON.stringify({exported:new Date().toISOString(),settings:DB.settings,items:DB.items,locations:DB.locations,
+    txns:DB.txns,requests:DB.requests,counts:DB.counts,adjustments:DB.adjustments,audit:DB.audit},null,1)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='smartware360-backup-'+dstr(Date.now())+'.json'; a.click();
+  logAudit('Backup','Full database export','','','Manual download');
+  toast('Backup downloaded.');
+}
+
+/* ==========================================================================
+   Layer 12: boot, offline queue, URL parameters
+   ========================================================================== */
+window.addEventListener('online', ()=>{
+  if(DB.queue.length){ toast(`Back online — ${DB.queue.length} queued transaction${DB.queue.length>1?'s':''} synchronised.`); DB.queue=[]; }
+  renderTop();
+});
+window.addEventListener('offline', ()=>{ toast('Offline. Scanning, counting and transactions keep working and will sync automatically.'); renderTop(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') UI.closeDrawer(); });
+setInterval(renderTop, 30000);
+
+(function boot(){
+  const p=new URLSearchParams(location.search);
+  if(p.get('lang')==='ar') UI.toggleLang();
+  if(p.get('wh')&&DB.warehouses.some(w=>w.id===p.get('wh'))) UI.wh=p.get('wh');
+  if(p.get('user')&&DB.users.some(u=>u.id===p.get('user'))) UI.user=DB.users.find(u=>u.id===p.get('user'));
+  const v=p.get('view'); if(v&&VIEWS[v]&&UI.can(v)) UI.view=v;
+  UI.render();
+  // exports used by the CSV buttons that build rows lazily
+  window._rl = reorderList(UI.wh).map(x=>[x.it.sku,x.it.name,x.available,x.avgDaily,x.lead,x.safety,x.rop,x.dz===Infinity?'':x.dz,x.suggest,(x.suggest*x.it.cost).toFixed(2),DB.suppliers.find(s=>s.id===x.it.supplier).name]);
+  window._au = DB.audit.slice().sort((a,b)=>b.ts-a.ts).map(a=>[tstr(a.ts),a.user,a.action,a.entity,a.old,a.neu,a.reason,a.device]);
+})();
+</script>
+</body>
+</html>
