@@ -1,13 +1,13 @@
-[README.md](https://github.com/user-attachments/files/32230466/README.md)
+[README.md](https://github.com/user-attachments/files/32230665/README.md)
 # SMARTWARE 360
 
-![tests](https://github.com/OWNER/smartware360/actions/workflows/test.yml/badge.svg)
+![tests](https://github.com/hellounityfacilities/smartware360/actions/workflows/test.yml/badge.svg)
 
 Warehouse management and daily operations system, built for facilities management,
 construction, trading and spare-parts businesses operating in Qatar. English and Arabic,
 QAR, multi-warehouse.
 
-**[Open the live demo →](https://OWNER.github.io/smartware360/)**
+**[Open the live demo →](https://hellounityfacilities.github.io/smartware360/)**
 
 The demo runs entirely in the browser with 120 days of seeded data for a Doha facilities
 management company: four warehouses, 382 bin locations, 44 SKUs, around 1,250
