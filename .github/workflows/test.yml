@@ -1,0 +1,32 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  invariants:
+    name: Schema invariant suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      # The suite runs against PostgreSQL compiled to WebAssembly, so there is
+      # no database service to spin up here — the same command that runs on a
+      # laptop runs unchanged in CI.
+      - name: Run the invariant suite
+        run: npm test
